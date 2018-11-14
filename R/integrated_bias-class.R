@@ -5,7 +5,8 @@
 #'   that can be shared among multiple components in an integrated population
 #'   model
 #' 
-#' @param params named list of parameters (see details for information on setting prior distributions)
+#' @param x 
+#' @param p_detect parameter of detection model (see details for information on setting prior distributions)
 #' @param ... additional arguments to \link[base]{print}, \link[base]{summary}, and \link[graphics]{plot} methods (currently ignored)
 #' @param x an \code{integrated_bias} object
 #' @param object an \code{integrated_bias} object
@@ -36,33 +37,71 @@
 #' @export
 #' @rdname integrated_bias
 #' 
-detection <- function(params = list()) {
+no_bias <- function() {
   
-  # set type
-  type <- "detection"
+  # set up no_bias function
+  bias_fn <- function(x) x
   
-  # initialise model parameters
-  param_list <- list(abundance = beta(1, 1),
-                     recapture = beta(1, 1),
-                     linear = normal(0, 1))
-  param_list[names(params)] <- params
-  
-  # do the parameters have reasonable bounds?
-  abundance_bounds <- extract_bounds(param_list$abundance)
-  recapture_bounds <- extract_bounds(param_list$recapture)
-  
-  # warn if not
-  if (abundance_bounds[1] < 0 | abundance_bounds[2] > 1)
-    warning("the prior for abundance has bounds outside of [0, 1]; is this reasonable?", call. = FALSE)
-  if (recapture_bounds[1] < 0 | recapture_bounds[2] > 1)
-    warning("the prior for recapture has bounds outside of [0, 1]; is this reasonable?", call. = FALSE)
-  
-  # collate and return outputs  
-  bias <- list(type = type,
-               params = param_list)
+  bias <- list(bias = bias_fn,
+               params = NULL)
   
   # return outputs
-  integrated_bias(bias)
+  as.integrated_bias(bias)
+    
+}
+
+#' @export
+#' @rdname integrated_bias
+#' 
+detection <- function(p_detect = beta(1, 1)) {
+  
+  # is the parameter of a reasonable class?
+  if ("greta_array" %in% class(p_detect)) {
+    
+    # check if it's a distribution
+    node <- get_node(p_detect)
+    
+    # is it a distribution?
+    if (!is.null(node$distribution)) {
+      
+      # if so, do the parameters have reasonable bounds?
+      p_bounds <- extract_bounds(p_detect)
+      
+    } else {
+     
+      # if not, does it have reasonable dims?
+      if (any(dim(p_detect) != 1))
+        stop("p_detect must be a scalar numeric, scalar data greta_array, or greta distribution", call. = FALSE)
+      
+    }
+    
+  } else {
+    
+    if (is.numeric(p_detect)) {
+      
+      # check length
+      if (length(p_detect) > 1)
+        stop("p_detect must be a scalar numeric, scalar data greta_array, or greta distribution", call. = FALSE)
+      
+      # do the parameters have reasonable bounds?
+      p_bounds <- range(p_detect)
+      
+    }
+    
+  }
+    
+  # warn if bounds are not logical
+  if (p_bounds[1] < 0 | p_bounds[2] > 1)
+    warning("the prior for p_detect has bounds outside of [0, 1]; is this reasonable?", call. = FALSE)
+
+  # set up correction function
+  bias_fn <- function(x, detection) detection * x
+
+  bias <- list(bias = bias_fn,
+               params = p_detect)
+  
+  # return outputs
+  as.integrated_bias(bias)
   
 }
 

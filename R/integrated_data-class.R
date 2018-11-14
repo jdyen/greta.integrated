@@ -39,10 +39,7 @@
 #' @export
 #' @rdname integrated_data
 #' 
-abundance <- function(data,
-                      process,
-                      bias,
-                      settings = list()) {
+age_abundance <- function(data, process, bias = no_bias(), settings = list()) {
 
   # need to unpack the settings
   all_settings <- list(breaks = NULL)
@@ -141,10 +138,106 @@ abundance <- function(data,
 #' @export
 #' @rdname integrated_data
 #' 
-recapture <- function(data,
-                      process,
-                      bias,
-                      settings = list()) {
+stage_abundance <- function(data, process, bias = no_bias(), settings = list()) {
+  
+  # need to unpack the settings
+  all_settings <- list(breaks = NULL)
+  all_settings[names(settings)] <- settings
+  
+  # is the process model a stage or age based model?
+  class_type <- ifelse(process$type == "leslie", "age", "stage")
+  
+  # need to treat matrix-like data and list data differently
+  if (is.data.frame(data) | is.matrix(data)) {
+    
+    # are the data formatted as if there's an individual age or size in each column?
+    if (ncol(data) != process$classes) {
+      
+      # edge case: data are total abundances through time
+      if (nrow(data) == 1 | ncol(data) == 1)
+        stop("data have one row or column; are you providing total abundance data? If so, try flattening data to a vector", call. = FALSE)
+      
+      # if data aren't provided as counts, we need breaks
+      if (is.null(all_settings$breaks))
+        stop("breaks must be provided if data are not entered as counts", call. = FALSE)
+      
+      # what's the mismatch between classes and data?
+      greater_less <- ifelse(ncol(data) > process$classes, "more", "fewer")
+      
+      # let the user know what's going on
+      cat(paste0("data has ", greater_less, " columns than classes; each row will be treated as individual ", class_type, "s and not counts\n"))
+      
+      # use hist_fn to bin the data according to the provided breaks
+      data_clean <- t(apply(data, 1, hist_fn, breaks = all_settings$breaks))
+      
+    } else {
+      
+      # most likely case: data provided as binned counts per class
+      cat(paste0("data has one column for each class; each row will be treated as counts of individuals per class\n"))
+      
+      # data shouldn't need any work; return as is
+      data_clean <- data
+      
+    }
+    
+  } else {
+    
+    # are data formatted in a list with multiple entries?
+    if (is.list(data)) {
+      
+      # how long is each element?
+      list_len <- sapply(data, length)
+      
+      # if they're all the same, might be binned data provided as a list rather than matrix-like
+      if (all(list_len == classes)) {
+        
+        # let the user know what's going on
+        cat(paste0("each element of data has an entry for each class; elements will be treated as counts of individuals per class\n"))
+        
+        # directly convert list to matrix (each element has same length)        
+        data_clean <- do.call(rbind, data)
+        
+      } else {  # elements differ in length, probably have individual sizes or ages
+        
+        # if so, we need breaks to bin the data        
+        if (is.null(all_settings$breaks))
+          stop("breaks must be provided if data are not entered as counts", call. = FALSE)
+        
+        # let the user know what's going on
+        cat(paste0("converting from list to matrix; are data ", class_type, "s and not counts?\n"))
+        
+        # bin the data using hist_fn, applied to each element of the input list
+        data_clean <- t(sapply(data, hist_fn, breaks = all_settings$breaks))
+        
+      }
+      
+    } else {
+      
+      # edge case: data are total abundances through time
+      if (is.numeric(data) | is.integer(data))
+        stop("are you providing total abundance data as a single vector? These aren't supported yet but will be soon", call. = FALSE)
+      
+      stop("abundance data must be a matrix, data.frame, or list", call. = FALSE) 
+      
+    }
+    
+  }
+  
+  # want to tie everything together in a single output
+  data_module <- list(data = data_clean,
+                      process = process, 
+                      bias = bias,
+                      data_type = "abundance")
+  
+  # return outputs with class definition
+  as.integrated_data(data_module)
+  
+}
+
+#' @export
+#' @rdname integrated_data
+#' 
+age_recapture <- function(data, process, bias = no_bias(), settings = list()) {
   
   # need to unpack the settings
   all_settings <- list(breaks = NULL)
@@ -251,15 +344,118 @@ recapture <- function(data,
 #' @export
 #' @rdname integrated_data
 #' 
+stage_recapture <- function(data, process, bias = no_bias(), settings = list()) {
+  
+  # need to unpack the settings
+  all_settings <- list(breaks = NULL)
+  all_settings[names(settings)] <- settings
+  
+  # is the process model a stage or age based model?
+  class_type <- ifelse(process$type == "leslie", "age", "stage")
+  
+  # check that our data look like they might be capture histories
+  if (is.matrix(data) | is.data.frame(data)) {
+    
+    # do the entries look like binned or binary data?
+    is_binary <- all(unique(data) %in% c(0, 1))
+    is_binned <- all(unique(data) %in% seq_len(process$classes))
+    
+    # if data aren't binned we need to bin them
+    if (!is_binary & !is_binned) {
+      
+      # this won't work if we don't have breaks
+      if (is.null(all_settings$breaks))
+        stop("breaks must be provided if recapture data are not binned or binary", call. = FALSE)
+      
+      # the cut function can bin the data
+      data_binned <- matrix(cut(data, all_settings$breaks, labels = FALSE), ncol = ncol(data))
+      
+      # just need to clean up some NAs afterwards
+      data_binned <- ifelse(is.na(data_binned), 0, data_binned)
+      
+      # that's it, just return this
+      data_clean <- data_binned
+      
+      # set the data type so we know which likelihood to use
+      data_type <- "binned_recapture"
+      
+    }
+    
+    # can only do so much with binary data
+    if (is_binary) {
+      
+      # let the user know that we don't like binary data
+      cat(paste0("binary capture histories can only inform detection and total survival probabilities\n"))
+      
+      # return what we have
+      data_clean <- data
+      
+      # set data type so the likelihood can be worked out quickly
+      data_type <- "binary_recapture"
+      
+    }
+    
+    # return as is if already bined
+    if (is_binned) {
+      
+      # return what we have
+      data_clean <- data
+      
+      # set the data type so we know which likelihood to use
+      data_type <- "binned_recapture"
+      
+    }
+    
+    # are any individuals not observed at least once?
+    not_observed <- apply(data_clean, 1, sum) == 0
+    
+    # if not, remove unobserved individuals (with a warning)
+    if (any(not_observed)) {
+      warning(paste0("removing ", sum(not_observed), " individuals that were never observed"), call. = FALSE)
+      data_clean <- data_clean[!not_observed, ]
+    }
+    
+    # check that bin IDs are logical
+    if (!is_binary) {
+      
+      # what are the first and final classes?
+      first_class <- apply(data_clean, 1, function(x) x[min(which(x > 0))])
+      final_class <- apply(data_clean, 1, function(x) x[max(which(x > 0))])
+      
+      # has any individual regressed multiple classes?
+      class_errors <- final_class < (first_class - 1)
+      
+      # this is fine in some models, so just give a warning
+      warning(paste0(sum(class_errors), " individuals regressed by two or more classes, is this reasonable?"), call. = FALSE)
+      
+    }
+    
+  } else {
+    
+    # can't handle other data types
+    stop("recapture data must be a matrix of capture histories", call. = FALSE)
+    
+  }
+  
+  # want to tie everything together in a single output
+  data_module <- list(data = data_clean,
+                      process = process, 
+                      bias = bias,
+                      data_type = data_type)
+  
+  # return outputs with class definition
+  as.integrated_data(data_module)
+  
+} 
+
+#' @export
+#' @rdname integrated_data
+#' 
 size_at_age <- function(x, ...) {
   UseMethod("size_at_age")
 }
 
-size_at_age.formula <- function(x,
-                                data,
-                                process,
-                                bias,
-                                settings = list()) {
+size_at_age.formula <- function(x, data, process, bias = no_bias(), settings = list()) {
   
   # this won't work if we haven't got a Leslie matrix process
   if (process$type != "leslie")
@@ -323,10 +519,7 @@ size_at_age.formula <- function(x,
   
 }
 
-size_at_age.default <- function(x,
-                                process,
-                                bias,
-                                settings = list()) {
+size_at_age.default <- function(x, process, bias = no_bias(), settings = list()) {
 
   # this won't work if we haven't got a Leslie matrix process
   if (process$type != "leslie")
@@ -372,10 +565,7 @@ size_at_age.default <- function(x,
 #' @export
 #' @rdname integrated_data
 #' 
-community <- function(data,
-                      process,
-                      bias,
-                      settings = list()) {
+community <- function(data, process, bias = no_bias(), settings = list()) {
   
   warning("community data are not currently implemented; this integrated_data object will be ignored in subsequent models", call. = FALSE)
   
@@ -393,10 +583,7 @@ community <- function(data,
 #' @export
 #' @rdname integrated_data
 #' 
-predictors <- function(data,
-                       process,
-                       bias,
-                       settings = list()) {
+predictors <- function(data, process, bias = no_bias(), settings = list()) {
   
   # make sure predictor data are in a matrix or data.frame
   if (!is.matrix(data) & !is.data.frame(data))
@@ -447,9 +634,7 @@ print.integrated_data <- function(x, ...) {
 #' @rdname integrated_data
 #' 
 summary.integrated_data <- function(object, ...) {
-  
   NULL
-  
 }
 
 # internal function: create integrated_data object
