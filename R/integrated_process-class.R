@@ -7,6 +7,7 @@
 #' @param classes something
 #' @param density function of class \link[greta.integrated]{integrated_density}
 #' @param priors named list of prior distributions (see details for information on setting prior distributions)
+#' @param masks masking of matrices
 #' @param ... additional arguments to \link[base]{print}, \link[base]{summary}, and \link[graphics]{plot} methods (currently ignored)
 #' @param x an \code{integrated_process} object
 #' @param object an \code{integrated_process} object
@@ -39,26 +40,39 @@
 #' @export
 #' @rdname integrated_process
 #' 
-leslie <- function(classes, density = no_density(), priors = list()) {
+leslie <- function(classes, density = no_density(), priors = list(), masks = list()) {
   
   # set type
   type <- "leslie"
   
-  # initialise model parameters
-  prior_list <- list(reproductive = max(classes),
-                     survival = beta(1, 1),
+  # initialise model priors
+  prior_list <- list(survival = beta(1, 1),
+                     transition = beta(1, 1),
                      fecundity = normal(0, 10, truncation = c(0, Inf)),
                      initials = normal(0, 10, truncation = c(0, Inf)),
                      random = normal(0, 10, truncation = c(0, Inf)))
+  
+  # overwrite defaults with user-specified priors
   prior_list[names(priors)] <- priors
   
-  # do the parameters have reasonable bounds?
+  # set default masking
+  mask_list <- list(survival = ifelse(row(diag(classes)) == classes & col(diag(classes)) == classes, 1, 0),
+                    transition = ifelse(row(diag(classes)) == col(diag(classes)) + 1, 1, 0),
+                    fecundity = ifelse(row(diag(classes)) == 1 & col(diag(classes)) != 1, 1, 0))
+  
+  # overwrite defaults with user-specified masks
+  mask_list[names(masks)] <- masks
+  
+  # do the priors have reasonable bounds?
   survival_bounds <- extract_bounds(prior_list$survival)
+  transition_bounds <- extract_bounds(prior_list$transition)
   fecundity_bounds <- extract_bounds(prior_list$fecundity)
   
   # warn if not
   if (survival_bounds[1] < 0 | survival_bounds[2] > 1)
     warning("the prior for survival has bounds outside of [0, 1]; is this reasonable?", call. = FALSE)
+  if (transition_bounds[1] < 0 | transition_bounds[2] > 1)
+    warning("the prior for transition has bounds outside of [0, 1]; is this reasonable?", call. = FALSE)
   if (fecundity_bounds[1] < 0)
     warning("the prior for fecundity has a lower bound less than 0; is this reasonable?", call. = FALSE)
   
@@ -66,7 +80,8 @@ leslie <- function(classes, density = no_density(), priors = list()) {
   process <- list(type = type,
                   classes = classes,
                   density = density,
-                  params = prior_list)
+                  priors = prior_list,
+                  masks = mask_list)
   
   # return outputs
   as.integrated_process(process)
@@ -76,30 +91,39 @@ leslie <- function(classes, density = no_density(), priors = list()) {
 #' @export
 #' @rdname integrated_process
 #' 
-lefkovitch <- function(classes, density = no_density(), priors = list()) {
+lefkovitch <- function(classes, density = no_density(), priors = list(), masks = list()) {
   
   # set type
   type <- "lefkovitch"
   
-  # initialise model parameters
-  prior_list <- list(reproductive = max(classes),
-                     survival = beta(1, 1),
-                     growth = beta(1, 1),
+  # set default priors
+  prior_list <- list(survival = beta(1, 1),
+                     transition = beta(1, 1),
                      fecundity = normal(0, 10, truncation = c(0, Inf)),
                      initials = normal(0, 10, truncation = c(0, Inf)),
                      random = normal(0, 10, truncation = c(0, Inf)))
+  
+  # overwrite defaults with user-specified priors
   prior_list[names(priors)] <- priors
   
-  # do the parameters have reasonable bounds?
+  # set default masking
+  mask_list <- list(survival = diag(classes),
+                    transition = ifelse(row(diag(classes)) == col(diag(classes)) + 1, 1, 0),
+                    fecundity = ifelse(row(diag(classes)) == 1 & col(diag(classes)) != 1, 1, 0))
+  
+  # overwrite defaults with user-specified masks
+  mask_list[names(masks)] <- masks
+  
+  # do the priors have reasonable bounds?
   survival_bounds <- extract_bounds(prior_list$survival)
-  growth_bounds <- extract_bounds(prior_list$growth)
+  transition_bounds <- extract_bounds(prior_list$transition)
   fecundity_bounds <- extract_bounds(prior_list$survival)
   
   # warn if not
   if (survival_bounds[1] < 0 | survival_bounds[2] > 1)
     warning("the prior for survival has bounds outside of [0, 1]; is this reasonable?", call. = FALSE)
-  if (growth_bounds[1] < 0 | growth_bounds[2] > 1)
-    warning("the prior for growth has bounds outside of [0, 1]; is this reasonable?", call. = FALSE)
+  if (transition_bounds[1] < 0 | transition_bounds[2] > 1)
+    warning("the prior for transition has bounds outside of [0, 1]; is this reasonable?", call. = FALSE)
   if (fecundity_bounds[1] < 0)
     warning("the prior for fecundity has a lower bound less than 0; is this reasonable?", call. = FALSE)
   
@@ -107,7 +131,8 @@ lefkovitch <- function(classes, density = no_density(), priors = list()) {
   process <- list(type = type,
                   classes = classes,
                   density = density,
-                  params = prior_list)
+                  priors = prior_list,
+                  masks = mask_list)
   
   # return outputs
   as.integrated_process(process)
@@ -117,51 +142,57 @@ lefkovitch <- function(classes, density = no_density(), priors = list()) {
 #' @export
 #' @rdname integrated_process
 #' 
-age <- function(classes, density = no_density(), priors = list()) {
+age <- function(classes, density = no_density(), priors = list(), masks = list()) {
   
-  leslie(classes, density, priors)
-  
-}
-
-#' @export
-#' @rdname integrated_process
-#' 
-stage <- function(classes, density = no_density(), priors = list()) {
-  
-  lefkovitch(classes, density, priors)
+  leslie(classes, density, priors, masks)
   
 }
 
 #' @export
 #' @rdname integrated_process
 #' 
-unstructured <- function(classes, density = no_density(), priors = list()) {
+stage <- function(classes, density = no_density(), priors = list(), masks = list()) {
+  
+  lefkovitch(classes, density, priors, masks)
+  
+}
+
+#' @export
+#' @rdname integrated_process
+#' 
+unstructured <- function(classes, density = no_density(), priors = list(), masks = list()) {
   
   # set type
   type <- "unstructured"
   
-  # initialise model parameters
-  prior_list <- list(reproductive = max(classes),
-                     survival = beta(1, 1),
-                     growth = beta(1, 1),
+  # initialise model priors
+  prior_list <- list(survival = beta(1, 1),
+                     transition = beta(1, 1),
                      fecundity = normal(0, 10, truncation = c(0, Inf)),
                      initials = normal(0, 10, truncation = c(0, Inf)),
-                     random = normal(0, 10, truncation = c(0, Inf)),
-                     survival_mask = matrix(1, nrow = classes, ncol = classes),
-                     fecundity_mask = matrix(rep(c(1, rep(0, classes - 1)), classes), nrow = classes, ncol = classes),
-                     growth_mask = matrix(1, nrow = classes, ncol = classes))
+                     random = normal(0, 10, truncation = c(0, Inf)))
+  
+  # overwrite defaults with user-specified priors
   prior_list[names(priors)] <- priors
   
-  # do the parameters have reasonable bounds?
+  # set default masking
+  mask_list <- list(survival = diag(classes),
+                    transition = matrix(1, nrow = classes, ncol = classes) - diag(classes),
+                    fecundity = ifelse(row(diag(classes)) == 1 & col(diag(classes)) != 1, 1, 0))
+  
+  # overwrite defaults with user-specified masks
+  mask_list[names(masks)] <- masks
+  
+  # do the priors have reasonable bounds?
   survival_bounds <- extract_bounds(prior_list$survival)
-  growth_bounds <- extract_bounds(prior_list$growth)
+  transition_bounds <- extract_bounds(prior_list$transition)
   fecundity_bounds <- extract_bounds(prior_list$survival)
   
   # warn if not
   if (survival_bounds[1] < 0 | survival_bounds[2] > 1)
     warning("the prior for survival has bounds outside of [0, 1]; is this reasonable?", call. = FALSE)
-  if (growth_bounds[1] < 0 | growth_bounds[2] > 1)
-    warning("the prior for growth has bounds outside of [0, 1]; is this reasonable?", call. = FALSE)
+  if (transition_bounds[1] < 0 | transition_bounds[2] > 1)
+    warning("the prior for transition has bounds outside of [0, 1]; is this reasonable?", call. = FALSE)
   if (fecundity_bounds[1] < 0)
     warning("the prior for fecundity has a lower bound less than 0; is this reasonable?", call. = FALSE)
   
@@ -169,7 +200,8 @@ unstructured <- function(classes, density = no_density(), priors = list()) {
   process <- list(type = type,
                   classes = classes,
                   density = density,
-                  params = prior_list)
+                  priors = prior_list,
+                  masks = mask_list)
   
   # return outputs
   as.integrated_process(process)
@@ -179,28 +211,41 @@ unstructured <- function(classes, density = no_density(), priors = list()) {
 #' @export
 #' @rdname integrated_process
 #' 
-ipm <- function(classes, density = no_density(), priors = list()) {
+ipm <- function(classes, density = no_density(), priors = list(), masks = list()) {
   
   # set type
   type <- "ipm"
   
-  # will default params work for ipm setup?
-  # should we warn that classes is now computational not process-based?
+  # will default parameters work for ipm setup?
+  stop("ipm models are not yet implemented", call. = FALSE)
   
-  # initialise model parameters
-  prior_list <- list(reproductive = max(classes),
-                     survival = beta(1, 1),
-                     growth = beta(1, 1),
+  # warn that classes is now computational not process-based
+  if (classes < 50)
+    warning(paste0("classes = ", classes, " seems quite low; an ipm model is approximating continuous classes, and typically classes > 50"), call. = FALSE)
+  
+  # initialise model priors
+  prior_list <- list(survival = beta(1, 1),
+                     transition = beta(1, 1),
                      fecundity = normal(0, 10, truncation = c(0, Inf)),
                      initials = normal(0, 10, truncation = c(0, Inf)),
                      random = normal(0, 10, truncation = c(0, Inf)))
+  
+  # overwrite defaults with user-specified priors
   prior_list[names(priors)] <- priors
+  
+  # set default masking
+  mask_list <- list(survival = diag(classes),
+                    transition = matrix(1, nrow = classes, ncol = classes) - diag(classes),
+                    fecundity = ifelse(row(diag(classes)) == 1 & col(diag(classes)) != 1, 1, 0))
+  
+  # overwrite defaults with user-specified masks
+  mask_list[names(masks)] <- masks
   
   # collate and return outputs  
   process <- list(type = type,
                   classes = classes,
                   density = density,
-                  params = prior_list)
+                  priors = prior_list)
   
   # return outputs
   as.integrated_process(process)
@@ -210,28 +255,35 @@ ipm <- function(classes, density = no_density(), priors = list()) {
 #' @export
 #' @rdname integrated_process
 #' 
-occupancy <- function(classes, density = no_density(), priors = list()) {
+occupancy <- function(classes, density = no_density(), priors = list(), masks = list()) {
   
   # set type
   type <- "occupancy"
   
-  # will default params work for ipm setup?
-  # should we warn that classes is now computational not process-based?
-  
-  # initialise model parameters
-  prior_list <- list(reproductive = max(classes),
-                     survival = beta(1, 1),
-                     growth = beta(1, 1),
+  # initialise model priors
+  prior_list <- list(survival = beta(1, 1),
+                     transition = beta(1, 1),
                      fecundity = normal(0, 10, truncation = c(0, Inf)),
                      initials = normal(0, 10, truncation = c(0, Inf)),
                      random = normal(0, 10, truncation = c(0, Inf)))
+  
+  # overwrite defaults with user-specified priors
   prior_list[names(priors)] <- priors
+  
+  # set default masking
+  mask_list <- list(survival = diag(classes),
+                    transition = matrix(1, nrow = classes, ncol = classes) - diag(classes),
+                    fecundity = ifelse(row(diag(classes)) == 1 & col(diag(classes)) != 1, 1, 0))
+  
+  # overwrite defaults with user-specified masks
+  mask_list[names(masks)] <- masks
   
   # collate and return outputs  
   process <- list(type = type,
                   classes = classes,
                   density = density,
-                  params = prior_list)
+                  priors = prior_list,
+                  masks = mask_list)
   
   # return outputs
   as.integrated_process(process)
