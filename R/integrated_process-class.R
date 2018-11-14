@@ -142,12 +142,12 @@ unstructured <- function(classes, density = no_density(), priors = list(), masks
   # overwrite defaults with user-specified masks
   mask_list[names(masks)] <- masks
   
-  # do the priors have reasonable bounds?
+  # what are the bounds on the priors?
   survival_bounds <- extract_bounds(prior_list$survival)
   transition_bounds <- extract_bounds(prior_list$transition)
   fecundity_bounds <- extract_bounds(prior_list$survival)
   
-  # warn if not
+  # are these reasonable?
   if (survival_bounds[1] < 0 | survival_bounds[2] > 1)
     warning("the prior for survival has bounds outside of [0, 1]; is this reasonable?", call. = FALSE)
   if (transition_bounds[1] < 0 | transition_bounds[2] > 1)
@@ -170,7 +170,7 @@ unstructured <- function(classes, density = no_density(), priors = list(), masks
 #' @export
 #' @rdname integrated_process
 #' 
-ipm <- function(classes, density = no_density(), priors = list(), masks = list()) {
+ipm <- function(classes, density = no_density(), priors = list()) {
   
   # set type
   type <- "ipm"
@@ -192,14 +192,6 @@ ipm <- function(classes, density = no_density(), priors = list(), masks = list()
   # overwrite defaults with user-specified priors
   prior_list[names(priors)] <- priors
   
-  # set default masking
-  mask_list <- list(survival = diag(classes),
-                    transition = matrix(1, nrow = classes, ncol = classes) - diag(classes),
-                    fecundity = ifelse(row(diag(classes)) == 1 & col(diag(classes)) != 1, 1, 0))
-  
-  # overwrite defaults with user-specified masks
-  mask_list[names(masks)] <- masks
-  
   # collate and return outputs  
   process <- list(type = type,
                   classes = classes,
@@ -214,7 +206,7 @@ ipm <- function(classes, density = no_density(), priors = list(), masks = list()
 #' @export
 #' @rdname integrated_process
 #' 
-occupancy <- function(classes, density = no_density(), priors = list(), masks = list()) {
+occupancy <- function(classes, density = no_density(), priors = list()) {
   
   # set type
   type <- "occupancy"
@@ -229,20 +221,11 @@ occupancy <- function(classes, density = no_density(), priors = list(), masks = 
   # overwrite defaults with user-specified priors
   prior_list[names(priors)] <- priors
   
-  # set default masking
-  mask_list <- list(survival = diag(classes),
-                    transition = matrix(1, nrow = classes, ncol = classes) - diag(classes),
-                    fecundity = ifelse(row(diag(classes)) == 1 & col(diag(classes)) != 1, 1, 0))
-  
-  # overwrite defaults with user-specified masks
-  mask_list[names(masks)] <- masks
-  
   # collate and return outputs  
   process <- list(type = type,
                   classes = classes,
                   density = density,
-                  priors = prior_list,
-                  masks = mask_list)
+                  priors = prior_list)
   
   # return outputs
   as.integrated_process(process)
