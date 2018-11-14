@@ -47,7 +47,11 @@ integrated_model <- function(...) {
   process_list <- sapply(data_modules, extract_process)
   if (length(unique(process_list) > 1))
     stop(paste0("data are connected to ", length(unique(process_list)), " different processes"), call. = FALSE)
-    
+
+  
+  # check the bias layers -- should share params where needed
+  
+  # expand to use multiple processes      
   process <- process_list[1]
   # have to add greta array setup here
   ###
@@ -193,8 +197,8 @@ integrated_model <- function(...) {
 #' @export
 #' @rdname integrated_model
 #' 
-is.integrated_model <- function(model) {
-  inherits(model, 'integrated_model')
+is.integrated_model <- function(object) {
+  inherits(object, 'integrated_model')
 }
 
 #' @export

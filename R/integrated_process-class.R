@@ -6,9 +6,8 @@
 #' 
 #' @param classes something
 #' @param density something
-#' @param replicates number of distinct populations
 #' @param params named list of parameters (see details for information on setting prior distributions)
-#' @param ... additional arguments
+#' @param ... additional arguments to \link[base]{print}, \link[base]{summary}, and \link[graphics]{plot} methods (currently ignored)
 #' @param x an \code{integrated_process} object
 #' @param object an \code{integrated_process} object
 #'
@@ -19,7 +18,7 @@
 #'   with an inverse-logit link.
 #'
 #' @return An object of class \code{integrated_process}, which can be used to create
-#'    \link[integrated]{integrated_data} and \link[integrated]{integrated_model} objects
+#'    \link[greta.integrated]{integrated_data} and \link[greta.integrated]{integrated_model} objects
 #' 
 #' @import greta
 #' 
@@ -33,10 +32,9 @@
 #' 
 #' # setting custom priors
 #' process <- leslie(5, density = "none",
-#'                   params = list(survival = iprobit(normal(0, 1)),
+#'                   params = list(survival = ilogit(normal(0, 1)),
 #'                                 fecundity = exp(normal(0, 1))))
 #' }
-
 
 #' @export
 #' @rdname integrated_process
@@ -121,6 +119,66 @@ lefkovitch <- function(classes, density = "none", params = list()) {
 #' @export
 #' @rdname integrated_process
 #' 
+age <- function(classes, density = "none", params = list()) {
+  
+  leslie(classes, density, params)
+  
+}
+
+#' @export
+#' @rdname integrated_process
+#' 
+stage <- function(classes, density = "none", params = list()) {
+  
+  lefkovitch(classes, density, params)
+  
+}
+
+#' @export
+#' @rdname integrated_process
+#' 
+unstructured <- function(classes, density = "none", params = list()) {
+  
+  # set type
+  type <- "unstructured"
+  
+  # initialise model parameters
+  param_list <- list(density = uniform(0, 1),
+                     reproductive = max(classes),
+                     survival = beta(1, 1),
+                     growth = beta(1, 1),
+                     fecundity = normal(0, 10, truncation = c(0, Inf)),
+                     initials = normal(0, 10, truncation = c(0, Inf)),
+                     random = normal(0, 10, truncation = c(0, Inf)))
+  param_list[names(params)] <- params
+  
+  # do the parameters have reasonable bounds?
+  survival_bounds <- extract_bounds(param_list$survival)
+  growth_bounds <- extract_bounds(param_list$growth)
+  fecundity_bounds <- extract_bounds(param_list$survival)
+  
+  # warn if not
+  if (survival_bounds[1] < 0 | survival_bounds[2] > 1)
+    warning("the prior for survival has bounds outside of [0, 1]; is this reasonable?", call. = FALSE)
+  if (growth_bounds[1] < 0 | growth_bounds[2] > 1)
+    warning("the prior for growth has bounds outside of [0, 1]; is this reasonable?", call. = FALSE)
+  if (fecundity_bounds[1] < 0)
+    warning("the prior for fecundity has a lower bound less than 0; is this reasonable?", call. = FALSE)
+  
+  # collate and return outputs  
+  process <- list(type = type,
+                  classes = classes,
+                  density = density,
+                  params = param_list)
+  
+  # return outputs
+  as.integrated_process(process)
+  
+}
+
+#' @export
+#' @rdname integrated_process
+#' 
 ipm <- function(classes, density = "none", params = list()) {
   
   # set type
@@ -153,8 +211,8 @@ ipm <- function(classes, density = "none", params = list()) {
 #' @export
 #' @rdname integrated_process
 #' 
-is.integrated_process <- function(x) {
-  inherits(model, "integrated_process")
+is.integrated_process <- function(object) {
+  inherits(object, "integrated_process")
 }
 
 #' @export
@@ -173,7 +231,17 @@ summary.integrated_process <- function(object, ...) {
   
 }
 
+#' @export
+#' @rdname integrated_process
+#' 
+plot.integrated_process <- function(x, ...) {
+  
+  # make a nice plot of the matrix with colours for zero/nonzero cells
+  NULL
+  
+}
+
 # internal function: create integrated_process object
-as.integrated_process <- function (model) {
-  as_class(model, name = "integrated_process", type = "list")
+as.integrated_process <- function(object) {
+  as_class(object, name = "integrated_process", type = "list")
 }

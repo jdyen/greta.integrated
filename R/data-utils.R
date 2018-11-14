@@ -1,5 +1,14 @@
 # internal helper functions for integrated R package
 
+# hist function to handle missing data and return counts only
+hist_fn <- function(x, breaks) {
+  out <- rep(0, length(breaks) - 1)
+  if (length(x) & !all(is.na(x))) {
+    out <- hist(x, plot = FALSE, breaks = breaks)$counts
+  }
+  out
+}
+
 # count stages that an individual successfully transitions out of
 count_stages_survived <- function(x, classes) {
   out <- rep(0, classes)
