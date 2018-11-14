@@ -128,9 +128,10 @@ abundance <- function(data,
   }
 
   # want to tie everything together in a single output
-  data_module <- list(data = clean_data,
+  data_module <- list(data = data_clean,
                       process = process, 
-                      bias = bias)
+                      bias = bias,
+                      data_type = "abundance")
   
   # return outputs with class definition
   as.integrated_data(data_module)
@@ -140,88 +141,109 @@ abundance <- function(data,
 #' @export
 #' @rdname integrated_data
 #' 
-cmr <- function(data,
-                process,
-                bias,
-                settings = list()) {
+recapture <- function(data,
+                      process,
+                      bias,
+                      settings = list()) {
   
-  # turn data into a list and check that each element has the correct columns
+  # need to unpack the settings
+  all_settings <- list(breaks = NULL)
+  all_settings[names(settings)] <- settings
+  
+  # is the process model a stage or age based model?
+  class_type <- ifelse(process$type == "leslie", "age", "stage")
+  
+  # check that our data look like they might be capture histories
   if (is.matrix(data) | is.data.frame(data)) {
     
-    data <- list(data)
+    # do the entries look like binned or binary data?
+    is_binary <- all(unique(data) %in% c(0, 1))
+    is_binned <- all(unique(data) %in% seq_len(process$classes))
+    
+    # if data aren't binned we need to bin them
+    if (!is_binary & !is_binned) {
+      
+      # this won't work if we don't have breaks
+      if (is.null(all_settings$breaks))
+        stop("breaks must be provided if recapture data are not binned or binary", call. = FALSE)
+      
+      # the cut function can bin the data
+      data_binned <- matrix(cut(data, all_settings$breaks, labels = FALSE), ncol = ncol(data))
+      
+      # just need to clean up some NAs afterwards
+      data_binned <- ifelse(is.na(data_binned), 0, data_binned)
+      
+      # that's it, just return this
+      data_clean <- data_binned
+      
+      # set the data type so we know which likelihood to use
+      data_type <- "binned_recapture"
+      
+    }
+    
+    # can only do so much with binary data
+    if (is_binary) {
+      
+      # let the user know that we don't like binary data
+      cat(paste0("binary capture histories can only inform detection and total survival probabilities\n"))
+      
+      # return what we have
+      data_clean <- data
+      
+      # set data type so the likelihood can be worked out quickly
+      data_type <- "binary_recapture"
+      
+    }
+    
+    # return as is if already bined
+    if (is_binned) {
+
+      # return what we have
+      data_clean <- data
+      
+      # set the data type so we know which likelihood to use
+      data_type <- "binned_recapture"
+      
+    }
+    
+    # are any individuals not observed at least once?
+    not_observed <- apply(data_clean, 1, sum) == 0
+    
+    # if not, remove unobserved individuals (with a warning)
+    if (any(not_observed)) {
+      warning(paste0("removing ", sum(not_observed), " individuals that were never observed"), call. = FALSE)
+      data_clean <- data_clean[!not_observed, ]
+    }
+    
+    # check that bin IDs are logical
+    if (!is_binary) {
+      
+      # what are the first and final classes?
+      first_class <- apply(data_clean, 1, function(x) x[min(which(x > 0))])
+      final_class <- apply(data_clean, 1, function(x) x[max(which(x > 0))])
+       
+      # has any individual regressed multiple classes?
+      class_errors <- final_class < (first_class - 1)
+
+      # this is fine in some models, so just give a warning
+      warning(paste0(sum(class_errors), " individuals regressed by two or more classes, is this reasonable?"), call. = FALSE)
+      
+    }
     
   } else {
     
-    if (!is.list(data)) {
-      stop("stage_recapture data must be a matrix, data.frame, or list of matrices or data.frames",
-           call. = FALSE) 
-    }
+    # can't handle other data types
+    stop("recapture data must be a matrix of capture histories", call. = FALSE)
     
   }
-  
-  # check data format
-  for (i in seq_along(data)) {
-    if (!("size" %in% colnames(data[[i]]))) {
-      stop("stage_recapture models require size measurements at each recapture",
-           call. = FALSE)
-    }
-    
-    if (!all(c("size", "id", "time") %in% colnames(data[[i]]))) { 
-      stop("stage_recapture data should be in long format with size, id, and time columns",
-           call. = FALSE)
-    }
-  }
-  
-  # prepare cmr histories
-  # mark-recapture model to estimate detection and survival probabilities
-  # calculate size-based catch history for each individual
-  catch_size <- with(cmr_data, tapply(weight, list(idfish, year), mean))
-  catch_size <- ifelse(is.na(catch_size), 0, catch_size)
-  
-  # observed at least once?
-  observed <- apply(catch_size, 1, sum) > 0
-  catch_size <- catch_size[observed, ]
-  
-  # convert to size classes
-  catch_size_class <- matrix(cut(catch_size, size_breaks, labels = FALSE),
-                             ncol = ncol(catch_size))
-  catch_size_class <- ifelse(is.na(catch_size_class), 0, catch_size_class)
-  
-  # first and final size classes
-  first_size_class <- apply(catch_size_class, 1, function(x) x[min(which(x > 0))])
-  final_size_class <- apply(catch_size_class, 1, function(x) x[max(which(x > 0))])
-  
-  # has it shrunk *many* classes?
-  size_errors <- final_size_class < (first_size_class - 1)
-  
-  # if so, remove these observations
-  catch_size_class <- catch_size_class[!size_errors, ]
-  first_size_class <- first_size_class[!size_errors]
-  final_size_class <- final_size_class[!size_errors]
-  
-  # calculate first and final observations
-  first_obs <- apply(catch_size_class, 1, function(x) min(which(x > 0)))
-  final_obs <- apply(catch_size_class, 1, function(x) max(which(x > 0)))
-  
-  # number of years alive
-  n_alive <- final_obs - first_obs
-  
-  # are any individuals never recaptured?
-  single_obs <- first_obs == final_obs
-  
-  # focus on those with >1 observation
-  n_alive <- n_alive[!single_obs]
-  first_sizes <- first_size_class[!single_obs]
-  first_seen <- first_obs[!single_obs]
-  last_seen <- final_obs[!single_obs]
-  
 
-  
-  data_module <- list(data = clean_data,
+  # want to tie everything together in a single output
+  data_module <- list(data = data_clean,
                       process = process, 
-                      bias = bias)
+                      bias = bias,
+                      data_type = data_type)
   
-  # return outputs
+  # return outputs with class definition
   as.integrated_data(data_module)
   
 } 
@@ -229,82 +251,120 @@ cmr <- function(data,
 #' @export
 #' @rdname integrated_data
 #' 
-predictors <- function(data,
-                       process,
-                       bias,
-                       settings = list()) {
+size_at_age <- function(x, ...) {
+  UseMethod("size_at_age")
+}
+
+size_at_age.formula <- function(x,
+                                data,
+                                process,
+                                bias,
+                                settings = list()) {
   
-  # prepare predictor data
+  # this won't work if we haven't got a Leslie matrix process
+  if (process$type != "leslie")
+    stop("trying to match size and age data without an age-based model; this seems like a bad idea", call. = FALSE)
   
-  data_module <- list(data = clean_data,
-                      process = process,
-                      bias = bias)
+  # need to unpack the settings
+  all_settings <- list(breaks = NULL)
+  all_settings[names(settings)] <- settings
   
-  # return outputs
+  # parse formula to give outputs
+  var_names <- all.vars(x)
+  response <- get(var_names[1], data)
+  predictor <- get(var_names[2], data)
+  
+  # basic checks to see we haven't missed something
+  if (length(response) != length(predictor))
+    stop(paste0(var_names[1], " and ", var_names[2], " should be the same length"), call. = FALSE)
+  
+  # are the data likely to be binned?
+  is_binned <- all(response %% 1 == 0)
+  
+  # if data are not binned, we need to change this
+  if (!is_binned) {
+    
+    # let the user know what's going on
+    cat("attempting to bin data because size data are not rounded\n")
+    
+    # if data are binned, we need breaks to bin them
+    if (is.null(all_settings$breaks))
+      stop("breaks must be provided if size-at-age data are not binned", call. = FALSE)
+    
+    # bin away
+    response <- cut(response, all_settings$breaks, labels = FALSE)
+    
+  }
+  
+  # lots of ones can help us count up transition categories
+  ones_vec <- rep(1, length(response))
+  
+  # need to truncate ages if they exceed the number of available classes
+  predictor <- ifelse(predictor >= process$classes, process_classes, predictor)
+  
+  # need to turn vectors into a transition matrix
+  n_bin <- max(response)
+  data_clean <- matrix(0, nrow = n_bin, ncol = process$classes)
+  for (i in seq_len(n_bin)) {
+    predictor_sub <- predictor[response == i]
+    classification <- tapply(ones_vec, predictor_sub, sum)
+    data_clean[i, match(names(classification), seq_len(process$classes))] <- classification
+  }
+  
+  # want to tie everything together in a single output
+  data_module <- list(data = data_clean,
+                      process = process, 
+                      bias = bias,
+                      data_type = "size_at_age")
+  
+  
+  # return outputs with class definition
   as.integrated_data(data_module)
   
-} 
+}
 
-#' @export
-#' @rdname integrated_data
-#' 
-growth <- function(data,
-                   process,
-                   bias,
-                   settings = list()) {
+size_at_age.default <- function(x,
+                                process,
+                                bias,
+                                settings = list()) {
+
+  # this won't work if we haven't got a Leslie matrix process
+  if (process$type != "leslie")
+    stop("trying to match size and age data without an age-based model; this seems like a bad idea", call. = FALSE)
   
-  # prepare growth trajectories
-  # convert matrix or data.frame data to a list
-  if (is.matrix(data) | is.data.frame(data)) {
+  # is the input data a matrix-like data type?
+  if (!is.matrix(x) & !is.data.frame(x))
+    stop("size-at-age data must be a matrix or data.frame", call. = FALSE)
+
+  # what dims does x have?
+  dims <- dim(x)
+  
+  # if at least one of columns or rows don't line up with the number of classes, this won't work
+  if (!(process$classes %in% dims))
+    stop(("one dimension of size-at-age data must match the number of classes in process (", process$classes, ")"), call. = FALSE)
+
+  # format so that ages are always in columns
+  if (dims[2] != process$classes) {
     
-    # check if data are formatted correctly
-    if (ncol(data) != nrow(data)) {
-      data <- make_growth_data_matrix(data = data,
-                                      classes = integrated_process$classes,
-                                      settings = settings)
-    } 
+    data_clean <- t(data)
     
-    data <- list(data)
+  } else {
+    
+    # if ncol(x) == nrow(x), warn that we assume ages in columns
+    if (dims[1] == dims[2])
+      cat("size-at-age data must have ages in columns; is this data set formatted correctly?", call. = FALSE)
+    
+    data_clean <- data
     
   }
-  
-  # data should be a list or matrix
-  if (!is.list(data)) {
-    stop("growth data must be a matrix, data.frame, or list of matrices or data.frames",
-         call. = FALSE)
-  }
-  
-  # error if the number of data classes doesn't match the process
-  if (!all(integrated_process$classes == sapply(data, nrow))) {
-    stop("number of classes in growth data must match number of classes in integrated_process")
-  }
-  
-  if (integrated_process$replicates > 1) {      
-    if (length(data) > 1) {
-      if (length(data) != length(integrated_process$replicate_id)) {
-        stop(paste0("growth data have ", length(data), " elements but ",
-                    " integrated process has ", integrated_process$replicates,
-                    " replicates"),
-             call. = FALSE)
-      }
-    } else {
-      stop(paste0("one growth data set should be supplied for each of the ",
-                  integrated_process$replicates, " process replicates"),
-           call. = FALSE)
-    }
-  }
-  
-  # create data module from growth data matrix
-  data_module <- define_individual_growth_module(data = data,
-                                                 integrated_process = integrated_process, 
-                                                 observation_model = observation_model)
-  
-  data_module <- list(data = clean_data,
+          
+  # want to tie everything together in a single output
+  data_module <- list(data = data_clean,
                       process = process, 
-                      bias = bias)
-
+                      bias = bias,
+                      data_type = "size_at_age")
   
-  # return outputs
+  # return outputs with class definition
   as.integrated_data(data_module)
   
 }   
@@ -317,16 +377,57 @@ community <- function(data,
                       bias,
                       settings = list()) {
   
-  # prepare cmr histories
+  warning("community data are not currently implemented; this integrated_data object will be ignored in subsequent models", call. = FALSE)
   
-  data_module <- list(data = clean_data,
+  # want to tie everything together in a single output
+  data_module <- list(data = NULL,
                       process = process, 
-                      bias = bias)
+                      bias = bias,
+                      data_type = "community")
+  
+  # return outputs with class definition
+  as.integrated_data(data_module)
+  
+}
+
+#' @export
+#' @rdname integrated_data
+#' 
+predictors <- function(data,
+                       process,
+                       bias,
+                       settings = list()) {
+  
+  # make sure predictor data are in a matrix or data.frame
+  if (!is.matrix(data) & !is.data.frame(data))
+    stop("predictor data must be a matrix or data.frame", call. = FALSE)
+  
+  # are there any NAs in the data?
+  na_col_check <- apply(data, 2, function(x) any(is.na(x)))
+  if (any(na_col_check))
+    warning("there are missing values in the predictor data; these will be ignored but fitted models will be more reproducible if NAs are handled prior to model fitting", call. = FALSE)
+  
+  # are there are any completely missing rows?
+  na_row_check <- apply(data, 1, function(x) all(is.na(x)))
+  
+  # if so, warn and remove
+  if (any(na_row_check)) {
+    warning(paste0("there are ", sum(na_row_check), " rows with completely missing data; these will be removed from all analyses"), call. = FALSE)
+    data_clean <- data[!na_row_check, ]
+  } else {
+    data_clean <- data
+  }
+  
+  # want to tie everything together in a single output
+  data_module <- list(data = data_clean,
+                      process = process, 
+                      bias = bias,
+                      data_type = "predictor")
   
   # return outputs
   as.integrated_data(data_module)
   
-}
+} 
 
 #' @export
 #' @rdname integrated_data
