@@ -5,8 +5,8 @@
 #'   process model for an integrated population analysis
 #' 
 #' @param classes something
-#' @param density something
-#' @param params named list of parameters (see details for information on setting prior distributions)
+#' @param density function of class \link[greta.integrated]{integrated_density}
+#' @param priors named list of prior distributions (see details for information on setting prior distributions)
 #' @param ... additional arguments to \link[base]{print}, \link[base]{summary}, and \link[graphics]{plot} methods (currently ignored)
 #' @param x an \code{integrated_process} object
 #' @param object an \code{integrated_process} object
@@ -28,34 +28,33 @@
 #' library(integrated)
 #' 
 #' # a really basic age-structured model with five age classes
-#' process <- leslie(5, density = "none")
+#' process <- leslie(5, density = ricker(lambda = uniform(0, 1)))
 #' 
 #' # setting custom priors
-#' process <- leslie(5, density = "none",
-#'                   params = list(survival = ilogit(normal(0, 1)),
+#' process <- leslie(5, density = bh(lambda = uniform(0, 1)),
+#'                   priors = list(survival = ilogit(normal(0, 1)),
 #'                                 fecundity = exp(normal(0, 1))))
 #' }
 
 #' @export
 #' @rdname integrated_process
 #' 
-leslie <- function(classes, density = "none", params = list()) {
+leslie <- function(classes, density = no_density(), priors = list()) {
   
   # set type
   type <- "leslie"
   
   # initialise model parameters
-  param_list <- list(density = uniform(0, 1),
-                     reproductive = max(classes),
+  prior_list <- list(reproductive = max(classes),
                      survival = beta(1, 1),
                      fecundity = normal(0, 10, truncation = c(0, Inf)),
                      initials = normal(0, 10, truncation = c(0, Inf)),
                      random = normal(0, 10, truncation = c(0, Inf)))
-  param_list[names(params)] <- params
-
+  prior_list[names(priors)] <- priors
+  
   # do the parameters have reasonable bounds?
-  survival_bounds <- extract_bounds(param_list$survival)
-  fecundity_bounds <- extract_bounds(param_list$survival)
+  survival_bounds <- extract_bounds(prior_list$survival)
+  fecundity_bounds <- extract_bounds(prior_list$fecundity)
   
   # warn if not
   if (survival_bounds[1] < 0 | survival_bounds[2] > 1)
@@ -67,7 +66,7 @@ leslie <- function(classes, density = "none", params = list()) {
   process <- list(type = type,
                   classes = classes,
                   density = density,
-                  params = param_list)
+                  params = prior_list)
   
   # return outputs
   as.integrated_process(process)
@@ -77,25 +76,24 @@ leslie <- function(classes, density = "none", params = list()) {
 #' @export
 #' @rdname integrated_process
 #' 
-lefkovitch <- function(classes, density = "none", params = list()) {
+lefkovitch <- function(classes, density = no_density(), priors = list()) {
   
   # set type
   type <- "lefkovitch"
   
   # initialise model parameters
-  param_list <- list(density = uniform(0, 1),
-                     reproductive = max(classes),
+  prior_list <- list(reproductive = max(classes),
                      survival = beta(1, 1),
                      growth = beta(1, 1),
                      fecundity = normal(0, 10, truncation = c(0, Inf)),
                      initials = normal(0, 10, truncation = c(0, Inf)),
                      random = normal(0, 10, truncation = c(0, Inf)))
-  param_list[names(params)] <- params
+  prior_list[names(priors)] <- priors
   
   # do the parameters have reasonable bounds?
-  survival_bounds <- extract_bounds(param_list$survival)
-  growth_bounds <- extract_bounds(param_list$growth)
-  fecundity_bounds <- extract_bounds(param_list$survival)
+  survival_bounds <- extract_bounds(prior_list$survival)
+  growth_bounds <- extract_bounds(prior_list$growth)
+  fecundity_bounds <- extract_bounds(prior_list$survival)
   
   # warn if not
   if (survival_bounds[1] < 0 | survival_bounds[2] > 1)
@@ -109,7 +107,7 @@ lefkovitch <- function(classes, density = "none", params = list()) {
   process <- list(type = type,
                   classes = classes,
                   density = density,
-                  params = param_list)
+                  params = prior_list)
   
   # return outputs
   as.integrated_process(process)
@@ -119,43 +117,45 @@ lefkovitch <- function(classes, density = "none", params = list()) {
 #' @export
 #' @rdname integrated_process
 #' 
-age <- function(classes, density = "none", params = list()) {
+age <- function(classes, density = no_density(), priors = list()) {
   
-  leslie(classes, density, params)
-  
-}
-
-#' @export
-#' @rdname integrated_process
-#' 
-stage <- function(classes, density = "none", params = list()) {
-  
-  lefkovitch(classes, density, params)
+  leslie(classes, density, priors)
   
 }
 
 #' @export
 #' @rdname integrated_process
 #' 
-unstructured <- function(classes, density = "none", params = list()) {
+stage <- function(classes, density = no_density(), priors = list()) {
+  
+  lefkovitch(classes, density, priors)
+  
+}
+
+#' @export
+#' @rdname integrated_process
+#' 
+unstructured <- function(classes, density = no_density(), priors = list()) {
   
   # set type
   type <- "unstructured"
   
   # initialise model parameters
-  param_list <- list(density = uniform(0, 1),
-                     reproductive = max(classes),
+  prior_list <- list(reproductive = max(classes),
                      survival = beta(1, 1),
                      growth = beta(1, 1),
                      fecundity = normal(0, 10, truncation = c(0, Inf)),
                      initials = normal(0, 10, truncation = c(0, Inf)),
-                     random = normal(0, 10, truncation = c(0, Inf)))
-  param_list[names(params)] <- params
+                     random = normal(0, 10, truncation = c(0, Inf)),
+                     survival_mask = matrix(1, nrow = classes, ncol = classes),
+                     fecundity_mask = matrix(rep(c(1, rep(0, classes - 1)), classes), nrow = classes, ncol = classes),
+                     growth_mask = matrix(1, nrow = classes, ncol = classes))
+  prior_list[names(priors)] <- priors
   
   # do the parameters have reasonable bounds?
-  survival_bounds <- extract_bounds(param_list$survival)
-  growth_bounds <- extract_bounds(param_list$growth)
-  fecundity_bounds <- extract_bounds(param_list$survival)
+  survival_bounds <- extract_bounds(prior_list$survival)
+  growth_bounds <- extract_bounds(prior_list$growth)
+  fecundity_bounds <- extract_bounds(prior_list$survival)
   
   # warn if not
   if (survival_bounds[1] < 0 | survival_bounds[2] > 1)
@@ -169,7 +169,7 @@ unstructured <- function(classes, density = "none", params = list()) {
   process <- list(type = type,
                   classes = classes,
                   density = density,
-                  params = param_list)
+                  params = prior_list)
   
   # return outputs
   as.integrated_process(process)
@@ -179,7 +179,7 @@ unstructured <- function(classes, density = "none", params = list()) {
 #' @export
 #' @rdname integrated_process
 #' 
-ipm <- function(classes, density = "none", params = list()) {
+ipm <- function(classes, density = no_density(), priors = list()) {
   
   # set type
   type <- "ipm"
@@ -188,20 +188,50 @@ ipm <- function(classes, density = "none", params = list()) {
   # should we warn that classes is now computational not process-based?
   
   # initialise model parameters
-  param_list <- list(density = uniform(0, 1),
-                     reproductive = max(classes),
+  prior_list <- list(reproductive = max(classes),
                      survival = beta(1, 1),
                      growth = beta(1, 1),
                      fecundity = normal(0, 10, truncation = c(0, Inf)),
                      initials = normal(0, 10, truncation = c(0, Inf)),
                      random = normal(0, 10, truncation = c(0, Inf)))
-  param_list[names(params)] <- params
+  prior_list[names(priors)] <- priors
   
   # collate and return outputs  
   process <- list(type = type,
                   classes = classes,
                   density = density,
-                  params = param_list)
+                  params = prior_list)
+  
+  # return outputs
+  as.integrated_process(process)
+  
+}
+
+#' @export
+#' @rdname integrated_process
+#' 
+occupancy <- function(classes, density = no_density(), priors = list()) {
+  
+  # set type
+  type <- "occupancy"
+  
+  # will default params work for ipm setup?
+  # should we warn that classes is now computational not process-based?
+  
+  # initialise model parameters
+  prior_list <- list(reproductive = max(classes),
+                     survival = beta(1, 1),
+                     growth = beta(1, 1),
+                     fecundity = normal(0, 10, truncation = c(0, Inf)),
+                     initials = normal(0, 10, truncation = c(0, Inf)),
+                     random = normal(0, 10, truncation = c(0, Inf)))
+  prior_list[names(priors)] <- priors
+  
+  # collate and return outputs  
+  process <- list(type = type,
+                  classes = classes,
+                  density = density,
+                  params = prior_list)
   
   # return outputs
   as.integrated_process(process)
