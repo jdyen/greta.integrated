@@ -40,71 +40,58 @@
 #' @export
 #' @rdname integrated_process
 #' 
-leslie <- function(classes, density = no_density(), priors = list(), masks = list()) {
+leslie <- function(classes, density = no_density(), priors = list()) {
   
-  # set type
-  type <- "leslie"
-  
-  # initialise model priors
-  prior_list <- list(survival = beta(1, 1),
-                     transition = beta(1, 1),
-                     fecundity = normal(0, 10, truncation = c(0, Inf)),
-                     initials = normal(0, 10, truncation = c(0, Inf)),
-                     random = normal(0, 10, truncation = c(0, Inf)))
-  
-  # overwrite defaults with user-specified priors
-  prior_list[names(priors)] <- priors
-  
-  # set default masking
-  mask_list <- list(survival = ifelse(row(diag(classes)) == classes & col(diag(classes)) == classes, 1, 0),
+  # set default masking for a leslie matrix
+  masks <- list(survival = ifelse(row(diag(classes)) == classes & col(diag(classes)) == classes, 1, 0),
                     transition = ifelse(row(diag(classes)) == col(diag(classes)) + 1, 1, 0),
                     fecundity = ifelse(row(diag(classes)) == 1 & col(diag(classes)) != 1, 1, 0))
   
-  # overwrite defaults with user-specified masks
-  mask_list[names(masks)] <- masks
+  # create an unstructured matrix with these masks
+  process <- unstructured(classes = classes, density = density, priors = priors, masks = masks)
   
-  # do the priors have reasonable bounds?
-  survival_bounds <- extract_bounds(prior_list$survival)
-  transition_bounds <- extract_bounds(prior_list$transition)
-  fecundity_bounds <- extract_bounds(prior_list$fecundity)
-  
-  # warn if not
-  if (survival_bounds[1] < 0 | survival_bounds[2] > 1)
-    warning("the prior for survival has bounds outside of [0, 1]; is this reasonable?", call. = FALSE)
-  if (transition_bounds[1] < 0 | transition_bounds[2] > 1)
-    warning("the prior for transition has bounds outside of [0, 1]; is this reasonable?", call. = FALSE)
-  if (fecundity_bounds[1] < 0)
-    warning("the prior for fecundity has a lower bound less than 0; is this reasonable?", call. = FALSE)
-  
-  # collate and return outputs  
-  process <- list(type = type,
-                  classes = classes,
-                  density = density,
-                  priors = prior_list,
-                  masks = mask_list)
+  # set type appropriately
+  process$type <- "leslie"
   
   # return outputs
-  as.integrated_process(process)
+  process
 
 }
 
 #' @export
 #' @rdname integrated_process
 #' 
-lefkovitch <- function(classes, density = no_density(), priors = list(), masks = list()) {
+lefkovitch <- function(classes, density = no_density(), priors = list()) {
   
-  # set type
-  type <- "lefkovitch"
+  # set default masking
+  masks <- list(survival = diag(classes),
+                transition = ifelse(row(diag(classes)) == col(diag(classes)) + 1, 1, 0),
+                fecundity = ifelse(row(diag(classes)) == 1 & col(diag(classes)) != 1, 1, 0))
   
-  # set default priors
-  prior_list <- list(survival = beta(1, 1),
-                     transition = beta(1, 1),
-                     fecundity = normal(0, 10, truncation = c(0, Inf)),
-                     initials = normal(0, 10, truncation = c(0, Inf)),
-                     random = normal(0, 10, truncation = c(0, Inf)))
+  # create an unstructured matrix with these masks
+  process <- unstructured(classes = classes, density = density, priors = priors, masks = masks)
   
-  # overwrite defaults with user-specified priors
-  prior_list[names(priors)] <- priors
+  # set type appropriately
+  process$type <- "lefkovitch"
+
+  # return outputs
+  process
+  
+}
+
+#' @export
+#' @rdname integrated_process
+#' 
+age <- function(classes, density = no_density(), priors = list()) {
+  
+  leslie(classes, density, priors)
+  
+}
+
+#' @export
+#' @rdname integrated_process
+#' 
+stage <- function(classes, density = no_density(), priors = list(), masks = list()) {
   
   # set default masking
   mask_list <- list(survival = diag(classes),
@@ -114,46 +101,18 @@ lefkovitch <- function(classes, density = no_density(), priors = list(), masks =
   # overwrite defaults with user-specified masks
   mask_list[names(masks)] <- masks
   
-  # do the priors have reasonable bounds?
-  survival_bounds <- extract_bounds(prior_list$survival)
-  transition_bounds <- extract_bounds(prior_list$transition)
-  fecundity_bounds <- extract_bounds(prior_list$survival)
+  # create an unstructured matrix with these masks
+  process <- unstructured(classes = classes, density = density, priors = priors, masks = mask_list)
   
-  # warn if not
-  if (survival_bounds[1] < 0 | survival_bounds[2] > 1)
-    warning("the prior for survival has bounds outside of [0, 1]; is this reasonable?", call. = FALSE)
-  if (transition_bounds[1] < 0 | transition_bounds[2] > 1)
-    warning("the prior for transition has bounds outside of [0, 1]; is this reasonable?", call. = FALSE)
-  if (fecundity_bounds[1] < 0)
-    warning("the prior for fecundity has a lower bound less than 0; is this reasonable?", call. = FALSE)
-  
-  # collate and return outputs  
-  process <- list(type = type,
-                  classes = classes,
-                  density = density,
-                  priors = prior_list,
-                  masks = mask_list)
-  
+  # set type appropriately
+  if (length(masks)) {
+    process$type <- "stage"
+  } else {
+    process$type <- "lefkovitch"
+  }
+      
   # return outputs
-  as.integrated_process(process)
-  
-}
-
-#' @export
-#' @rdname integrated_process
-#' 
-age <- function(classes, density = no_density(), priors = list(), masks = list()) {
-  
-  leslie(classes, density, priors, masks)
-  
-}
-
-#' @export
-#' @rdname integrated_process
-#' 
-stage <- function(classes, density = no_density(), priors = list(), masks = list()) {
-  
-  lefkovitch(classes, density, priors, masks)
+  process
   
 }
 
