@@ -66,27 +66,16 @@ integrated_model <- function(...) {
   
   # how many different process models are we dealing with?
   process_list <- sapply(data_modules, function(x) x$process$hash)
-  unique_processes <- unique(process_list)
-  n_process <- length(unique_processes)
-  process_id <- match(process_list, unique_processes)
+  unique_process_hash <- unique(process_list)
+  n_process <- length(unique_process_hash)
+  process_id <- match(process_list, unique_process_hash)
+
+  # we need to build each process
+  unique_processes <- lapply(data_modules[unique(process_id)], function(x) x$process)
   
-  # how many different bias models are we dealing with?
-  bias_list <- sapply(data_modules, function(x) x$bias$hash)
-  unique_biases <- unique(bias_list)
-  n_bias <- length(unique_biases)
-  bias_id <- match(bias_list, unique_biases)
-  
-  # how many different forms of density dependence are we dealing with?
-  density_list <- sapply(data_modules, function(x) x$process$density$hash)
-  unique_densities <- unique(density_list)
-  n_density <- length(unique_densities)
-  density_id <- match(density_list, unique_densities)
-  
-  # DEFINE PROCESS
-  # expand to use multiple processes      
-  process <- process_list[1]
-  # have to add greta array setup here
-  ###
+  # do any of these processes have predictors?
+  if (any_predictors)
+    includes_predictors <- unique(process_id[is_predictor])
 
   # initialise mu values
   mu_param <- NULL

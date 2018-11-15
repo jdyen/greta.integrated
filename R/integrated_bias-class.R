@@ -45,9 +45,6 @@ no_bias <- function() {
   bias <- list(bias = bias_fn,
                params = NULL)
   
-  # add a bias hash
-  bias$hash <- paste(sample(c(LETTERS, letters, seq_len(10) - 1), size = 20, replace = TRUE), collapse = "")
-  
   # return outputs
   as.integrated_bias(bias)
     
@@ -102,9 +99,6 @@ detection <- function(p_detect = beta(1, 1)) {
 
   bias <- list(bias = bias_fn,
                params = p_detect)
-  
-  # add a bias hash
-  bias$hash <- paste(sample(c(LETTERS, letters, seq_len(10) - 1), size = 20, replace = TRUE), collapse = "")
   
   # return outputs
   as.integrated_bias(bias)
