@@ -56,7 +56,7 @@ integrated_model <- function(...) {
                    "stage_recapture", "stage_to_age", "age_to_stage",
                    "predictors")
   if (!all(data_types %in% implemented)) {
-    problem_types <- data_types[!(data_types %in% implemented))]
+    problem_types <- data_types[!(data_types %in% implemented)]
     stop(paste0("one or more data types are not currently implemented (", paste(problem_types, collapse = ", "), ")"), call. = FALSE)
   }
   

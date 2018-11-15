@@ -6,11 +6,11 @@
 \alias{print.integrated_model}
 \alias{plot.integrated_model}
 \alias{summary.integrated_model}
-\title{An integrated model object}
+\title{create integrated model objects}
 \usage{
-integrated_model(integrated_process, ...)
+integrated_model(...)
 
-is.integrated_model(model)
+is.integrated_model(object)
 
 \method{print}{integrated_model}(x, ...)
 
@@ -19,51 +19,40 @@ is.integrated_model(model)
 \method{summary}{integrated_model}(object, ...)
 }
 \arguments{
-\item{...}{\code{integrated_data} objects created with \link[integrated]{integrated_data}}
+\item{...}{one or more \link[greta.integrated]{integrated_data} objects}
+
+\item{object}{an \code{integrated_model} object}
+
+\item{x}{an \code{integrated_model} object}
+
+\item{process}{an \link[greta.integrated]{integrated_process} object}
 }
 \value{
-An object of class \code{greta_array}, which can be passed to
-   \link[greta]{model} and has associated `print`, `plot`, and `summary` methods
+A named list of \code{greta_array} objects, which can be passed to
+   \link[greta]{model}. This list has associated `print`, `plot`, and `summary` methods.
 }
 \description{
-An \code{integrated_model} object returns a \link[greta]{greta_array} that can be
- passed to \link[greta]{model}
+An \code{integrated_model} object combines multiple \link[greta.integrated]{integrated_data}
+  objects with one or more \link[greta.integrated]{integrated_process} objects and returns all
+   \link[greta]{greta_array} objects required to fit an integrated population model. Model fitting
+   is handled separately with the \link[greta]{model} and \link[greta]{mcmc} functions.
+}
+\details{
+something
 }
 \examples{
+\dontrun{
+
+### ADD EXAMPLES OF ALL FUNCTIONS HERE
 
 library(integrated)
 
 # prepare an example model
 model <- integrated_model()
                         
-\dontrun{                 
 # summarise fitted model
 model
 summary(model)
 plot(model)
-}
-
-# check if an object is an integrated_model object
-  
-\dontrun{
-is.integrated_model(model)
-}
-
-# Print information about an 'integrated_model' object
-
-\dontrun{
-print(x)
-}
-
-# Plot an 'integrated_model' object
-
-\dontrun{
-plot(x)
-}
-
-# Summarise an 'integrated_model' object
-
-\dontrun{
-summary(x)
 }
 }

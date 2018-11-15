@@ -526,7 +526,7 @@ stage_to_age.default <- function(x, process, bias = no_bias(), settings = list()
   
   # if at least one of columns or rows don't line up with the number of classes, this won't work
   if (!(process$classes %in% dims))
-    stop(("one dimension of stage-to-age data must match the number of classes in process (", process$classes, ")"), call. = FALSE)
+    stop(paste0("one dimension of stage-to-age data must match the number of classes in process (", process$classes, ")"), call. = FALSE)
 
   # format so that ages are always in columns
   if (dims[2] != process$classes) {
@@ -651,7 +651,7 @@ age_to_stage.default <- function(x, process, bias = no_bias(), settings = list()
   
   # if at least one of columns or rows don't line up with the number of classes, this won't work
   if (!(process$classes %in% dims))
-    stop(("one dimension of age-to-stage data must match the number of classes in process (", process$classes, ")"), call. = FALSE)
+    stop(paste0("one dimension of age-to-stage data must match the number of classes in process (", process$classes, ")"), call. = FALSE)
   
   # format so that ages are always in columns
   if (dims[2] != process$classes) {
@@ -757,7 +757,7 @@ is.integrated_data <- function(object) {
 #' @rdname integrated_data
 #' 
 print.integrated_data <- function(x, ...) {
-  cat(paste0(This is an integrated_data object\n))
+  cat(paste0("This is an integrated_data object\n"))
 }
 
 #' @export

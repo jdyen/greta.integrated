@@ -2,63 +2,84 @@
 % Please edit documentation in R/integrated_process-class.R
 \name{integrated_process}
 \alias{integrated_process}
+\alias{leslie}
+\alias{lefkovitch}
+\alias{age}
+\alias{stage}
+\alias{unstructured}
+\alias{ipm}
+\alias{occupancy}
 \alias{is.integrated_process}
 \alias{print.integrated_process}
 \alias{summary.integrated_process}
-\title{An integrated process object}
+\alias{plot.integrated_process}
+\title{create integrated process objects}
 \usage{
-integrated_process(type, classes, structure = "stage",
-  density_dependence = "none", replicates = 1, params = list())
+leslie(classes, density = no_density(), priors = list())
 
-is.integrated_process(model)
+lefkovitch(classes, density = no_density(), priors = list())
+
+age(classes, density = no_density(), priors = list())
+
+stage(classes, density = no_density(), priors = list(),
+  masks = list())
+
+unstructured(classes, density = no_density(), priors = list(),
+  masks = list())
+
+ipm(classes, density = no_density(), priors = list())
+
+occupancy(classes, density = no_density(), priors = list())
+
+is.integrated_process(object)
 
 \method{print}{integrated_process}(x, ...)
 
 \method{summary}{integrated_process}(object, ...)
+
+\method{plot}{integrated_process}(x, ...)
 }
 \arguments{
-\item{type}{something}
-
 \item{classes}{something}
 
-\item{structure}{something}
+\item{density}{function of class \link[greta.integrated]{integrated_density}}
 
-\item{density_dependence}{something}
+\item{priors}{named list of prior distributions (see details for information on setting prior distributions)}
 
-\item{replicates}{number of distinct populations}
+\item{masks}{masking of matrices}
 
-\item{...}{additional arguments}
+\item{object}{an \code{integrated_process} object}
+
+\item{x}{an \code{integrated_process} object}
+
+\item{...}{additional arguments to \link[base]{print}, \link[base]{summary}, and \link[graphics]{plot} methods (currently ignored)}
 }
 \value{
-An object of class \code{integrated_process}, which can be passed to
-   \link[integrated]{integrated_data} and \link[integrated]{integrated_model}
+An object of class \code{integrated_process}, which can be used to create
+   \link[greta.integrated]{integrated_data} and \link[greta.integrated]{integrated_model} objects
 }
 \description{
-An \code{integrated_process} object contains the underlying process model
- for an integrated population analysis
+An \code{integrated_process} object contains the underlying
+  process model for an integrated population analysis
+}
+\details{
+something. Prior distributions can be specified as single-dimensional
+  greta distribution, e.g., \code{normal(0, 1)}. Link functions and transformations
+  can be specified directly in-line, e.g., \code{ilogit(normal(0, 1))} specifies
+  normal priors with a mean of zero and a standard deviation of one, transformed
+  with an inverse-logit link.
 }
 \examples{
+\dontrun {
 
 library(integrated)
 
-# prepare an example model
-mpm_process <- integrated_process(type = 'MPM')
+# a really basic age-structured model with five age classes
+process <- leslie(5, density = ricker(lambda = uniform(0, 1)))
 
-# check if an object is an integrated_process object
-  
-\dontrun{
-is.integrated_process(model)
-}
-
-# Print information about an 'integrated_process' object
-
-\dontrun{
-print(x)
-}
-
-# Summarise an 'integrated_process' object
-
-\dontrun{
-summary(x)
+# setting custom priors
+process <- leslie(5, density = bh(lambda = uniform(0, 1)),
+                  priors = list(survival = ilogit(normal(0, 1)),
+                                fecundity = exp(normal(0, 1))))
 }
 }
