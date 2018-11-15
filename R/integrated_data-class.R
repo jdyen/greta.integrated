@@ -1,7 +1,7 @@
 #' @name integrated_data
 #' @title create integrated data objects
 #' 
-#' @description \code{integrated_data} defines a data object with appropriate likelihood based on
+#' @description \code{integrated_data} defines a data object with custom likelihood based on
 #'  a process model defined with \link[greta.integrated]{integrated_process}
 #' 
 #' @param data a single data input (see details for descriptions of possible input types)
@@ -19,6 +19,8 @@
 #' 
 #' @return An object of class \code{integrated_data}, which contains information on the data module and
 #'   can be passed to \link[greta.integrated]{integrated_model}
+#' 
+#' @export
 #' 
 #' @import greta
 #' 

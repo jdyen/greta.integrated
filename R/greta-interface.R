@@ -28,7 +28,7 @@
 #' }
 
 #' @export
-#' @rdname integrated_model
+#' @rdname greta_interface
 #' 
 initialise <- function(object) {
   UseMethod("initialise")
@@ -84,3 +84,5 @@ initialise_internal <- function(x) {
   out
   
 }
+
+integrated_summary <- NULL
