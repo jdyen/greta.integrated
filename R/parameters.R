@@ -126,7 +126,7 @@ define_parameters <- function(classes, priors, masks, process_type, predictors =
   # return outputs
   list(n_obs = n_obs, classes = classes,
        matrix = mat, inits = inits,
-       age_to_stage_conversion = age_stage,
-       stage_to_age_conversion = stage_age)
+       survival = survival, transition = transition, fecundity = fecundity,
+       age_to_stage_conversion = age_stage, stage_to_age_conversion = stage_age)
   
 }

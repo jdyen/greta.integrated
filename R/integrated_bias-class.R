@@ -40,7 +40,7 @@
 no_bias <- function() {
   
   # set up no_bias function
-  bias_fn <- function(x) x
+  bias_fn <- function(x, params) x
   
   bias <- list(bias = bias_fn,
                params = NULL)
@@ -95,10 +95,10 @@ detection <- function(p_detect = beta(1, 1)) {
     warning("the prior for p_detect has bounds outside of [0, 1]; is this reasonable?", call. = FALSE)
 
   # set up correction function
-  bias_fn <- function(x, detection) detection * x
+  bias_fn <- function(x, params) params$detection * x
 
   bias <- list(bias = bias_fn,
-               params = p_detect)
+               params = list(detection = p_detect))
   
   # return outputs
   as.integrated_bias(bias)

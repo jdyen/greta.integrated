@@ -315,3 +315,23 @@ hist_fn <- function(x, breaks) {
   }
   out
 }
+
+# convert numbers to words
+number_to_word <- function(x) {
+
+  # list of possible words we might need (more than ten would be crazy)  
+  words <- c("one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten")
+  
+  # name this list with numbers so it can be matched to input
+  names(words) <- seq_len(10)
+  
+  # if it's in our list, return the correct word
+  x[x %in% names(words)] <- words[x[x %in% names(words)]]
+  
+  # otherwise, return the number itself
+  x[!(x %in% names(words))] <- x[!(x %in% names(words))]
+  
+  # return output
+  x
+  
+}

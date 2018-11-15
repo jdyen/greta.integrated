@@ -269,7 +269,32 @@ summary.integrated_process <- function(object, ...) {
 #' 
 plot.integrated_process <- function(x, ...) {
   
-  # make a nice plot of the matrix with colours for zero/nonzero cells
+  # what are we working with?
+  surv <- x$masks$survival
+  tran <- x$masks$transition
+  fec <- x$masks$fecundity
+  
+  # do any overlap?
+  all <- surv + tran + fec
+  overlap <- any(all > 1)
+  
+  # define a matrix of colours
+  col_mat <- ifelse(surv, 1, 0)
+  col_mat <- ifelse(tran, 2, col_mat)
+  col_mat <- ifelse(fec, 3, col_mat)
+  
+  # easy if they don't overlap
+  if (!overlap) {
+
+    # plot with colours according to col_mat
+    image(col_mat, col = c("white", "blue", "darkblue", "lightblue"))
+    
+  } else {
+    
+    col_mat[all > 1] <- col_mat[all > 1] + 3
+    
+  }
+  
   NULL
   
 }

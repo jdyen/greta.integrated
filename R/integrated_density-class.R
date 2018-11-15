@@ -75,7 +75,7 @@ beverton <- function(parameters = uniform(0, 1)) {
 #' @export
 #' @rdname integrated_density
 #' 
-no_density <- function(parameters = NULL) {
+no_density <- function(parameters = uniform(0, 1)) {
   
   # specify functional form
   form <- function(x, params) {

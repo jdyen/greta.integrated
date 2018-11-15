@@ -4,9 +4,9 @@ age_abundance_loglik <- function(data, params) {
   # unpack params
   n_obs <- params$n_obs
   classes <- params$classes
+  density <- params$density
   mat <- params$matrix
   inits <- params$inits
-  density <- params$density
   process_class <- params$process_class
   age_to_stage <- params$age_to_stage_conversion
 
@@ -14,12 +14,12 @@ age_abundance_loglik <- function(data, params) {
   if (length(dim(matrix)) == 3) {
     iterated_states <- iterate_matrix_dynamic(matrix = mat, initial_state = inits, density = density)
   } else {
-    n_iter <- nrow(data$data)
+    n_iter <- ncol(data$data)
     iterated_states <- iterate_matrix(matrix = mat, initial_state = inits, niter = n_iter, density = density)
   }
 
   # add a conversion step if we have stage-structured data
-  if (process_class == "stage") {
+  if (process_class != "leslie") {
     modelled_states <- age_to_stage %*% iterated_states
   } else {
     modelled_states <- iterated_states
@@ -27,13 +27,13 @@ age_abundance_loglik <- function(data, params) {
     
   # create vectors of modelled and observed data
   mu <- c(modelled_states)
-  obs_tmp <- c(data$data)
+  observed_tmp <- as_data(c(data$data))
   
   # add bias transform if required
-  obs <- data$bias$bias(obs_tmp, data$bias$params)
+  observed <- data$bias$bias(observed_tmp, data$bias$params)
 
   # size obs model
-  distribution(obs) <- do.call(data$likelihood, list(mu))
+  distribution(observed) <- do.call(data$likelihood, list(mu))
   
   # could return mu at some point but want to keep clear for now
   NULL
@@ -45,11 +45,10 @@ stage_abundance_loglik <- function(data, params) {
   
   # unpack params
   n_obs <- params$n_obs
-  n_iter <- params$n_iter
   classes <- params$classes
   density <- params$density
   mat <- params$matrix
-  inits <- params$matrix
+  inits <- params$inits
   process_class <- params$process_class
   stage_to_age <- params$stage_to_age_conversion
 
@@ -57,25 +56,26 @@ stage_abundance_loglik <- function(data, params) {
   if (length(dim(matrix)) == 3) {
     iterated_states <- iterate_matrix_dynamic(matrix = mat, initial_state = inits, density = density)
   } else {
+    n_iter <- ncol(data$data)
     iterated_states <- iterate_matrix(matrix = mat, initial_state = inits, niter = n_iter, density = density)
   }
   
   # add a conversion step if we have stage-structured data
-  if (process_class == "age") {
+  if (process_class == "leslie") {
     modelled_states <- stage_to_age %*% iterated_states
   } else {
     modelled_states <- iterated_states
   }
   
   # create vectors of modelled and observed data
-  mu <- c(modelled_states)
-  obs_tmp <- c(data$data)
+  mu <- c(modelled_states$all_states)
+  observed_tmp <- as_data(c(data$data))
   
   # add bias transform if required
-  obs <- data$bias$bias(obs_tmp, data$bias$params)
+  observed <- data$bias$bias(observed_tmp, data$bias$params)
   
   # size obs model
-  distribution(obs) <- do.call(data$likelihood, list(mu))
+  distribution(observed) <- do.call(data$likelihood, list(mu))
   
   NULL
   

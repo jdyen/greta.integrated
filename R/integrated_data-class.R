@@ -72,11 +72,11 @@ age_abundance <- function(data, process, bias = no_bias(), settings = list()) {
     # is this a model with age data but a stage structure?
     if (process_class == "stage") {
       warning("it looks like you're fitting a stage-structured model to age data; is this correct?", call. = FALSE)
-      classes_alt <- ncol(data_clean)
+      classes_alt <- nrow(data_clean)
     }
 
     # what if there isn't one column per class?
-    if (ncol(data) != process$classes & process_class != "stage") {
+    if (nrow(data) != process$classes & process_class != "stage") {
       
       # edge case: data are total abundances through time; need to use a different function
       if (nrow(data) == 1)
@@ -85,7 +85,7 @@ age_abundance <- function(data, process, bias = no_bias(), settings = list()) {
         stop("data only have one column; are you providing total abundance data? If so, try the `abundance()` function", call. = FALSE)
       
       # there must be something wrong
-      stop(paste0("data should have one column per age class but have ", ncol(data), " columns and there are ", process$classes, " age classes"), call. = FALSE)
+      stop(paste0("data should have one row per age class but have ", nrow(data), " rows and there are ", process$classes, " age classes"), call. = FALSE)
 
     }
     
@@ -99,7 +99,7 @@ age_abundance <- function(data, process, bias = no_bias(), settings = list()) {
     # if they're all the same, might be binned data provided as a list rather than matrix-like
     if (all(list_len == classes)) {
       
-      data_clean <- do.call(rbind, data)
+      data_clean <- do.call(cbind, data)
       
     } else {  # elements differ in length, probably have individual ages
       
@@ -117,7 +117,7 @@ age_abundance <- function(data, process, bias = no_bias(), settings = list()) {
       cat(paste0("converting data from list to matrix; this assumes data are individual ", class_type, "s and not counts\n"))
       
       # bin the data using hist_fn, applied to each element of the input list
-      data_clean <- t(sapply(data, hist_fn, breaks = all_settings$breaks))
+      data_clean <- sapply(data, hist_fn, breaks = all_settings$breaks)
       
     }
     
@@ -173,11 +173,11 @@ stage_abundance <- function(data, process, bias = no_bias(), settings = list()) 
     # is this a model with age data but a stage structure?
     if (process_class == "age") {
       warning("it looks like you're fitting an age-structured model to stage data; is this correct?", call. = FALSE)
-      classes_alt <- ncol(data_clean)
+      classes_alt <- nrow(data_clean)
     }
     
     # potentially reformat data if there isn't one column per class
-    if (ncol(data) != process$classes & process_class != "age") {
+    if (nrow(data) != process$classes & process_class != "age") {
       
       # edge case: data are total abundances through time; need to use a different function
       if (nrow(data) == 1)
@@ -185,7 +185,7 @@ stage_abundance <- function(data, process, bias = no_bias(), settings = list()) 
       if (ncol(data) == 1)
         stop("data only have one column; are you providing total abundance data? If so, try the `abundance()` function", call. = FALSE)
       
-      stop(paste0("data should have one column per stage but have ", ncol(data), " columns and there are ", process$classes, " stages"), call. = FALSE)
+      stop(paste0("data should have one row per stage but have ", nrow(data), " rows and there are ", process$classes, " stages"), call. = FALSE)
       
     }
     
@@ -199,7 +199,7 @@ stage_abundance <- function(data, process, bias = no_bias(), settings = list()) 
     # if they're all the same, might be binned data provided as a list rather than matrix-like
     if (all(list_len == classes)) {
       
-      data_clean <- do.call(rbind, data)
+      data_clean <- do.call(cbind, data)
       
     } else {  # elements differ in length, probably have individual ages
       
@@ -215,7 +215,7 @@ stage_abundance <- function(data, process, bias = no_bias(), settings = list()) 
       cat(paste0("converting data from list to matrix; this assumes data are individual ", class_type, "s and not counts\n"))
       
       # bin the data using hist_fn, applied to each element of the input list
-      data_clean <- t(sapply(data, hist_fn, breaks = all_settings$breaks))
+      data_clean <- sapply(data, hist_fn, breaks = all_settings$breaks)
       
     }
     

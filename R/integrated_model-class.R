@@ -142,7 +142,7 @@ integrated_model <- function(...) {
     
     # we need to add a couple of things from the process module
     parameters_tmp$density <- process_list[[process_id[i]]]$density
-    parameters_tmp$process_class <- process_list[[process_id[i]]]$process_class
+    parameters_tmp$process_class <- process_list[[process_id[i]]]$type
 
     # choose appropriate likelihood based on type of data
     loglik_fun <- switch(data_modules[[i]]$data_type,
@@ -156,9 +156,12 @@ integrated_model <- function(...) {
                          age_to_stage = age_to_stage_loglik)
     
     # define likelihood (doesn't return anything)
-    loglik_fun(data_modules[[i]]$data, parameters_tmp)
+    loglik_fun(data_modules[[i]], parameters_tmp)
     
   } 
+  
+  # return a clean list of parameters
+  names(parameters) <- paste0("process_", number_to_word(seq_len(n_process)))
   
   # return outputs with class definition 
   as.integrated_model(parameters)
