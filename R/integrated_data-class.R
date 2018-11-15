@@ -750,7 +750,7 @@ predictors <- function(data, process, bias = no_bias(), settings = list()) {
 #' @rdname integrated_data
 #' 
 is.integrated_data <- function(object) {
-  inherits(object, integrated_data)
+  inherits(object, "integrated_data")
 }
 
 #' @export
@@ -769,5 +769,5 @@ summary.integrated_data <- function(object, ...) {
 
 # internal function: create integrated_data object
 as.integrated_data <- function(object) {
-  as_class(object, name = integrated_data, type = list)
+  as_class(object, name = "integrated_data", type = 'list')
 }

@@ -78,14 +78,18 @@ integrated_model <- function(...) {
   }
       
   # let's work through the processes one-by-one
+  process_list <- vector("list", length = n_process)
   for (i in seq_len(n_process)) {
     
     # pull out any process that matches hash i
     process_list[[i]] <- data_modules[[which(process_id == i)[1]]]$process
     
     # do we need to deal with age-stage conversions?
-    classes_alt <- sapply(data_modules[[which(process_id == i)]], function(x) x$classes_alt)
-
+    classes_alt <- sapply(data_modules[which(process_id == i)], function(x) x$classes_alt)
+    
+    # would like this not be a list
+    classes_alt <- unlist(classes_alt)
+    
     # if so, we need to make sure there's only one set of conversions
     age_or_stage <- ifelse(process_list[[i]]$type == "leslie", "stage-to-age", "age-to-stage")
     process_type <- ifelse(process_list[[i]]$type == "leslie", "age", "stage")
