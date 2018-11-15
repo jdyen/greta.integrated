@@ -1,40 +1,74 @@
-# internal function: define abundance log-likelihood
-abundance_loglik <- function(data, params) {
+# internal function: define age-abundance log-likelihood
+age_abundance_loglik <- function(data, params) {
 
-  age_dist <- vector('list', length = n_site)
-  for (i in seq_len(n_site)) {
-    age_dist[[i]] <- iterate_matrix_dynamic(matrix = mat$matrix[system_list == all_systems[i], , ],
-                                            initial_state = c(mat$init[, i]),
-                                            dens_param = mat$dens_param[i],
-                                            dens_form = dens_type)
+  # unpack params
+  n_obs <- params$n_obs
+  density <- params$density
+  mat <- params$matrix
+  inits <- params$matrix
+  process_class <- params$process_class
+
+  # set up iterated states
+  iterated_states <- iterate_matrix_dynamic(matrix = mat, initial_state = inits, density = density)
+
+  # add a conversion step if we have stage-structured data
+  if (process_class == "stage") {
+    modelled_states <- age_to_stage %*% iterated_states
+  } else {
+    modelled_states <- iterated_states
+  }
+    
+  # create vectors of modelled and observed data
+  mu <- c(modelled_states)
+  obs_tmp <- c(data$data)
+  
+  # add bias transform if required
+  obs <- data$bias$bias(obs_tmp, data$bias$params)
+
+  # size obs model
+  distribution(obs) <- do.call(data$likelihood, list(mu))
+  
+  NULL
+  
+}
+
+# internal function: define stage-abundance log-likelihood
+stage_abundance_loglik <- function(data, params) {
+  
+  # unpack params
+  n_obs <- params$n_obs
+  density <- params$density
+  mat <- params$matrix
+  inits <- params$matrix
+  process_class <- params$process_class
+  stage_to_age <- params$stage_to_age_conversion
+
+  # set up iterated states
+  iterated_states <- iterate_matrix_dynamic(matrix = mat, initial_state = inits, density = density)
+  
+  # add a conversion step if we have stage-structured data
+  if (process_class == "age") {
+    modelled_states <- stage_to_age %*% iterated_states
+  } else {
+    modelled_states <- iterated_states
   }
   
-  ## NEED SOME WAY TO HANDLE THIS -- REQUIRES > 1 LIKELIHOOD
-  # BUT PARAMS ARE PASSED, SO JUST NEED TO MAKE SURE age_size_dist EXISTS,
-  ## AND MAKE SURE THIS FUNCTION KNOWS IT EXISTS
-  ### BUT ABUNDANCE_DATA CLASS IS MATCHING PROCESS TO DATA-- WILL ERROR BEFORE THIS
-  #  NEED A NEW CLASS FOR SIZE_AGE_DATA? 
-  # MAYBE: "stage_abundance()" and "age_abundance()" options?
-  # IF stage_abundance() but leslie matrix, warn but allow it
-  # convert sizes to ages
-  modelled_sizes <- vector('list', length = length(age_dist))
-  for (i in seq_along(age_dist))
-    modelled_sizes[[i]] <- age_size_dist %*% age_dist[[i]]
+  # create vectors of modelled and observed data
+  mu <- c(modelled_states)
+  obs_tmp <- c(data$data)
   
-  # create vectors of fitted and observed data
-  mu <- do.call(c, modelled_sizes)
-  size_vec <- do.call(c, size_binned)
+  # add bias transform if required
+  obs <- data$bias$bias(obs_tmp, data$bias$params)
   
   # size obs model
-  # ALLOW USERS TO PASS THEIR OWN LIKELIHOOD (WITHIN REASON?)
-  distribution(size_vec) <- poisson(mu)
+  distribution(obs) <- do.call(data$likelihood, list(mu))
   
-  
+  NULL
   
 }
 
 # internal function: define recapture log-likelihood
-recapture_loglik <- function(data, params) {
+age_recapture_loglik <- function(data, params) {
   
   # calculate first and final observations
   first_obs <- apply(catch_size_class, 1, function(x) min(which(x > 0)))

@@ -75,20 +75,22 @@ integrated_model <- function(...) {
   # create a named parameters list to pass to all likelihood calcs
   parameters <- list(survival = survival,
                      fecundity = fecundity)
-  
+
   # subset data_modules to those that aren't predictors
   data_modules_response <- data_modules[not_predictors]
   
   for (i in seq_along(data_modules_response)) {
     
     data_tmp <- data_modules_response[[i]]
-  
-    
+
     # switch based on type
     loglik_fun <- switch(data_tmp$type,
-                         abundance = abundance_loglik,
-                         recapture = recapture_loglik,
-                         size_at_age = size_age_loglik)
+                         age_abundance = age_abundance_loglik,
+                         stage_abundance = stage_abundance_loglik,
+                         age_recapture = age_recapture_loglik,
+                         stage_recapture = stage_recapture_loglik,
+                         size_to_age = size_to_age_loglik,
+                         age_to_size = age_to_size_loglik)
     
     # calculate
     loglik_fun(data_tmp$data, parameters)
