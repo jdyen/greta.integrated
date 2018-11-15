@@ -37,16 +37,16 @@
 #' @export
 #' @rdname integrated_density
 #' 
-ricker <- function(lambda) {
+ricker <- function(parameters = uniform(0, 1)) {
 
   # specify functional form
-  scale_parameter <- function(x, lambda) {
-    1.0 - (x / lambda)
+  form <- function(x, params) {
+    exp(- x * params)
   }
   
   # collate and return outputs  
-  density <- list(form = scale_parameter,
-                  lambda = lambda)
+  density <- list(form = form,
+                  parameters = parameters)
   
   # return outputs
   as.integrated_density(density)
@@ -56,16 +56,16 @@ ricker <- function(lambda) {
 #' @export
 #' @rdname integrated_density
 #' 
-bh <- function(lambda) {
+bh <- function(parameters = uniform(0, 1)) {
   
   # specify functional form
-  scale_parameter <- function(x, lambda) {
-    1.0 / (1.0 + (x / lambda))
+  form <- function(x, params) {
+    1.0 / (1.0 + x * params)
   }
   
   # collate and return outputs  
-  density <- list(form = scale_parameter,
-                  lambda = lambda)
+  density <- list(form = form,
+                  parameters = parameters)
   
   # return outputs
   as.integrated_density(density)
@@ -75,15 +75,16 @@ bh <- function(lambda) {
 #' @export
 #' @rdname integrated_density
 #' 
-no_density <- function() {
+no_density <- function(parameters = NULL) {
   
   # specify functional form
-  scale_parameter <- function(x) {
+  form <- function(x, params) {
     1.0
   }
   
   # collate and return outputs  
-  density <- list(form = scale_parameter)
+  density <- list(form = form,
+                  parameters = parameters)
   
   # return outputs
   as.integrated_density(density)
