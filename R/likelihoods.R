@@ -3,11 +3,12 @@ age_abundance_loglik <- function(data, params) {
 
   # unpack params
   n_obs <- params$n_obs
+  n_iter <- params$n_iter
+  classes <- params$classes
   mat <- params$matrix
   inits <- params$inits
   density <- params$density
   process_class <- params$process_class
-  n_iter <- params$n_iter
   age_to_stage <- params$age_to_stage_conversion
 
   # set up iterated states
@@ -44,11 +45,12 @@ stage_abundance_loglik <- function(data, params) {
   
   # unpack params
   n_obs <- params$n_obs
+  n_iter <- params$n_iter
+  classes <- params$classes
   density <- params$density
   mat <- params$matrix
   inits <- params$matrix
   process_class <- params$process_class
-  n_iter <- params$n_iter
   stage_to_age <- params$stage_to_age_conversion
 
   # set up iterated states

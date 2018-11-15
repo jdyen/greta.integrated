@@ -129,7 +129,7 @@ unstructured <- function(classes, density = no_density(), priors = list(), masks
                      transition = beta(1, 1),
                      fecundity = normal(0, 10, truncation = c(0, Inf)),
                      initials = normal(0, 10, truncation = c(0, Inf)),
-                     random = normal(0, 10, truncation = c(0, Inf)))
+                     noise = normal(0, 10, truncation = c(0, Inf)))
   
   # overwrite defaults with user-specified priors
   prior_list[names(priors)] <- priors
@@ -190,7 +190,7 @@ ipm <- function(classes, density = no_density(), priors = list()) {
                      transition = beta(1, 1),
                      fecundity = normal(0, 10, truncation = c(0, Inf)),
                      initials = normal(0, 10, truncation = c(0, Inf)),
-                     random = normal(0, 10, truncation = c(0, Inf)))
+                     noise = normal(0, 10, truncation = c(0, Inf)))
   
   # overwrite defaults with user-specified priors
   prior_list[names(priors)] <- priors
@@ -222,7 +222,7 @@ occupancy <- function(classes, density = no_density(), priors = list()) {
                      transition = beta(1, 1),
                      fecundity = normal(0, 10, truncation = c(0, Inf)),
                      initials = normal(0, 10, truncation = c(0, Inf)),
-                     random = normal(0, 10, truncation = c(0, Inf)))
+                     noise = normal(0, 10, truncation = c(0, Inf)))
   
   # overwrite defaults with user-specified priors
   prior_list[names(priors)] <- priors

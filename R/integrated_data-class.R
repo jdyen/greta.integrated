@@ -49,6 +49,12 @@ age_abundance <- function(data, process, bias = no_bias(), settings = list()) {
   # is the process model a stage or age based model?
   process_class <- ifelse(process$type == "leslie", "age", "stage")
   
+  # how many classes are there in the process?
+  classes <- process$classes
+  
+  # placeholder to catch data dim mismatches
+  classes_alt <- NULL
+  
   # what format do the data take?
   is_matrix_like <- is.data.frame(data) | is.matrix(data)
   is_list <- is.list(data) & !is_matrix_like
@@ -64,10 +70,12 @@ age_abundance <- function(data, process, bias = no_bias(), settings = list()) {
     data_clean <- data
     
     # is this a model with age data but a stage structure?
-    if (process_class == "stage")
+    if (process_class == "stage") {
       warning("it looks like you're fitting a stage-structured model to age data; is this correct?", call. = FALSE)
+      classes_alt <- ncol(data_clean)
+    }
 
-    # potentially reformat data if there isn't one column per class
+    # what if there isn't one column per class?
     if (ncol(data) != process$classes & process_class != "stage") {
       
       # edge case: data are total abundances through time; need to use a different function
@@ -76,6 +84,7 @@ age_abundance <- function(data, process, bias = no_bias(), settings = list()) {
       if (ncol(data) == 1)
         stop("data only have one column; are you providing total abundance data? If so, try the `abundance()` function", call. = FALSE)
       
+      # there must be something wrong
       stop(paste0("data should have one column per age class but have ", ncol(data), " columns and there are ", process$classes, " age classes"), call. = FALSE)
 
     }
@@ -119,7 +128,9 @@ age_abundance <- function(data, process, bias = no_bias(), settings = list()) {
                       process = process, 
                       bias = bias,
                       data_type = "age_abundance",
-                      likelihood = all_settings$likelihood)
+                      likelihood = all_settings$likelihood,
+                      classes = classes,
+                      classes_alt = classes_alt)
   
   # return outputs with class definition
   as.integrated_data(data_module)
@@ -139,6 +150,12 @@ stage_abundance <- function(data, process, bias = no_bias(), settings = list()) 
   # is the process model a stage or age based model?
   process_class <- ifelse(process$type == "leslie", "age", "stage")
   
+  # how many classes are there in the process?
+  classes <- process$classes
+  
+  # placeholder to catch data dim mismatches
+  classes_alt <- NULL
+  
   # what format do the data take?
   is_matrix_like <- is.data.frame(data) | is.matrix(data)
   is_list <- is.list(data) & !is_matrix_like
@@ -154,8 +171,10 @@ stage_abundance <- function(data, process, bias = no_bias(), settings = list()) 
     data_clean <- data
     
     # is this a model with age data but a stage structure?
-    if (process_class == "age")
+    if (process_class == "age") {
       warning("it looks like you're fitting an age-structured model to stage data; is this correct?", call. = FALSE)
+      classes_alt <- ncol(data_clean)
+    }
     
     # potentially reformat data if there isn't one column per class
     if (ncol(data) != process$classes & process_class != "age") {
@@ -207,7 +226,9 @@ stage_abundance <- function(data, process, bias = no_bias(), settings = list()) 
                       process = process, 
                       bias = bias,
                       data_type = "stage_abundance",
-                      likelihood = all_settings$likelihood)
+                      likelihood = all_settings$likelihood,
+                      classes = classes,
+                      classes_alt = classes_alt)
   
   # return outputs with class definition
   as.integrated_data(data_module)
@@ -476,7 +497,9 @@ stage_to_age.formula <- function(x, data, process, bias = no_bias(), settings = 
                       process = process, 
                       bias = bias,
                       data_type = "stage_to_age",
-                      likelihood = all_settings$likelihood)
+                      likelihood = all_settings$likelihood,
+                      classes = ncol(data_clean),
+                      classes_alt = n_bin)
   
   
   # return outputs with class definition
@@ -525,7 +548,9 @@ stage_to_age.default <- function(x, process, bias = no_bias(), settings = list()
                       process = process, 
                       bias = bias,
                       data_type = "stage_to_age",
-                      likelihood = all_settings$likelihood)
+                      likelihood = all_settings$likelihood,
+                      classes = ncol(data_clean),
+                      classes_alt = nrow(data_clean))
   
   # return outputs with class definition
   as.integrated_data(data_module)
@@ -597,7 +622,9 @@ age_to_stage.formula <- function(x, data, process, bias = no_bias(), settings = 
                       process = process, 
                       bias = bias,
                       data_type = "age_to_stage",
-                      likelihood = all_settings$likelihood)
+                      likelihood = all_settings$likelihood,
+                      classes = ncol(data_clean),
+                      classes_alt = n_bin)
   
   
   # return outputs with class definition
@@ -646,7 +673,9 @@ age_to_stage.default <- function(x, process, bias = no_bias(), settings = list()
                       process = process, 
                       bias = bias,
                       data_type = "age_to_stage",
-                      likelihood = all_settings$likelihood)
+                      likelihood = all_settings$likelihood,
+                      classes = ncol(data_clean),
+                      classes_alt = nrow(data_clean))
   
   # return outputs with class definition
   as.integrated_data(data_module)

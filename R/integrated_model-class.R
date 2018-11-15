@@ -83,6 +83,16 @@ integrated_model <- function(...) {
     # pull out any process that matches hash i
     process_list[[i]] <- data_modules[[which(process_id == i)[1]]]$process
     
+    # do we need to deal with age-stage conversions?
+    classes_alt <- sapply(data_modules[[which(process_id == i)]], function(x) x$classes_alt)
+
+    # if so, we need to make sure there's only one set of conversions
+    age_or_stage <- ifelse(process_list[[i]]$type == "leslie", "stage-to-age", "age-to-stage")
+    process_type <- ifelse(process_list[[i]]$type == "leslie", "age", "stage")
+    if (length(unique(classes_alt)) > 1)
+      stop(paste0("there are multiple ", age_or_stage, " conversions with different dimensions; perhaps set up separate process models for each"), call. = FALSE)
+    classes_alt <- unique(classes_alt)
+
     # does this have predictors?
     includes_predictors <- i %in% process_id[is_predictor]
     
@@ -93,30 +103,25 @@ integrated_model <- function(...) {
       predictors <- data_module[[which(process_id == i & is_predictor)]]
       
       # pull together a set of parameters based on the details of this process
-      parameters[[i]] <- define_parameters(process_list[[i]]$classes, process_list[[i]]$priors, process_list[[i]]$masks, predictors)
+      parameters[[i]] <- define_parameters(classes = process_list[[i]]$classes,
+                                           priors = process_list[[i]]$priors,
+                                           masks = process_list[[i]]$masks,
+                                           process_type = process_type,
+                                           predictors = predictors,
+                                           classes_alt = classes_alt)
       
     } else {
       
       # pull together a set of parameters based on the details of this process
-      parameters[[i]] <- define_parameters(process_list[[i]]$classes, process_list[[i]]$priors, process_list[[i]]$masks)
+      parameters[[i]] <- define_parameters(classes = process_list[[i]]$classes,
+                                           priors = process_list[[i]]$priors,
+                                           masks = process_list[[i]]$masks,
+                                           process_type = process_type,
+                                           classes_alt = classes_alt)
       
     }
     
-    
   }
-
-  ### PARAMETERS are with the processes??
-  # create a named parameters list to pass to all likelihood calcs
-  parameters <- list(n_obs,
-                     n_iter,
-                     classes,
-                     matrix,
-                     inits,
-                     density,
-                     process_class,
-                     age_to_stage_conversion,
-                     stage_to_age_conversion,
-                     bias)
 
   # subset data_modules to those that aren't predictors
   if (any_predictors) {
@@ -126,12 +131,15 @@ integrated_model <- function(...) {
   
   for (i in seq_along(data_modules)) {
   
-    process_tmp <- process_list[[process_id[i]]]
-      
-    data_tmp <- data_modules[[i]]
+    # pull out the parameters we need
+    parameters_tmp <- parameters[[process_id[i]]]
+    
+    # we need to add a couple of things from the process module
+    parameters_tmp$density <- process_list[[process_id[i]]]$density
+    parameters_tmp$process_class <- process_list[[process_id[i]]]$process_class
 
-    # switch based on type
-    loglik_fun <- switch(data_tmp$type,
+    # choose appropriate likelihood based on type of data
+    loglik_fun <- switch(data_modules[[i]]$type,
                          age_abundance = age_abundance_loglik,
                          stage_abundance = stage_abundance_loglik,
                          binned_age_recapture = binned_age_recapture_loglik,
@@ -141,8 +149,8 @@ integrated_model <- function(...) {
                          stage_to_age = stage_to_age_loglik,
                          age_to_stage = age_to_stage_loglik)
     
-    # calculate
-    loglik_fun(data_tmp$data, parameters)
+    # define likelihood (doesn't return anything)
+    loglik_fun(data_modules[[i]]$data, parameters_tmp)
     
   } 
   

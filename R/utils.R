@@ -151,7 +151,8 @@ change_dims_op <- function(node, new_dim) {
                  "log1pe", "imultilogit",
                  "add", "subtract", "multiply", "divide", "power",
                  "log", "exp", "log1p", "expm1",
-                 "cos", "sin", "tan", "acos", "asin", "atan")
+                 "cos", "sin", "tan", "acos", "asin", "atan",
+                 "identity")
   
   # is this `op` OK?
   if (!(op %in% valid_ops)) 
@@ -192,6 +193,70 @@ change_dims_op <- function(node, new_dim) {
   # return a new array with new dims
   new_array
 
+}
+
+# change dims of a greta operation node
+change_dims_extract_op <- function(array, new_dim) {
+  
+  # pull out the node
+  node <- get_node(array)
+  
+  # what is the operation?
+  op <- node$operation_name
+  
+  # what if there is no operation?
+  if (is.null(op))
+    op <- "identity"
+  
+  # which operations are OK?
+  valid_ops <- c("ilogit", "iprobit", "icloglog", "icauchit",
+                 "log1pe", "imultilogit",
+                 "add", "subtract", "multiply", "divide", "power",
+                 "log", "exp", "log1p", "expm1",
+                 "cos", "sin", "tan", "acos", "asin", "atan",
+                 "identity")
+  
+  # is this `op` OK?
+  if (!(op %in% valid_ops)) 
+    stop(paste0("unable to change dimensions for operation: ", op), call. = FALSE)
+  
+  # `add` doesn't exist as a greta operation
+  if (op %in% c("add", "subtract", "multiply", "divide", "power")) {
+    op <- switch(op,
+                 "add" = "+",
+                 "subtract" = "-",
+                 "multiply" = "*",
+                 "divide" = "/",
+                 "power" = "^")
+  }
+  
+  # we need the node for the underlying distribution
+  if (is.null(node$distribution)) {
+    distrib_node <- node$children
+  } else {
+    distrib_node <- list(node)
+  }
+  
+  # want to make sure the children are all distributions
+  if (any(sapply(distrib_node, function(x) is.null(x$distribution))))
+    stop(paste0("one of the input nodes to ", op, " is not a probability distribution"), call. = FALSE)
+  if (!all(sapply(distrib_node, function(x) "distribution_node" %in% class(x$distribution))))
+    stop(paste0("one of the input nodes to ", op, " is not a probability distribution"), call. = FALSE)
+  
+  # change dims of underlying distributions
+  new_children <- lapply(distrib_node, change_dims_distrib, new_dim = new_dim)
+  
+  # pull out extra arguments to op
+  op_args <- node$operation_args
+
+  # return new distribs and the bits required to re-transform
+  new_array <- list(children = new_children,
+                    op = op,
+                    op_args = op_args)
+  
+  # return all this stuff
+  new_array
+  
 }
 
 # extract lower and upper bounds of a greta distribution
