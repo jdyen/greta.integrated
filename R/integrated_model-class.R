@@ -19,6 +19,7 @@
 #' @export
 #' 
 #' @import greta
+#' @import greta.dynamics
 #' 
 #' @examples
 #' \dontrun{
@@ -144,7 +145,7 @@ integrated_model <- function(...) {
     parameters_tmp$process_class <- process_list[[process_id[i]]]$process_class
 
     # choose appropriate likelihood based on type of data
-    loglik_fun <- switch(data_modules[[i]]$type,
+    loglik_fun <- switch(data_modules[[i]]$data_type,
                          age_abundance = age_abundance_loglik,
                          stage_abundance = stage_abundance_loglik,
                          binned_age_recapture = binned_age_recapture_loglik,
