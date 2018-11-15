@@ -58,7 +58,7 @@ age_abundance <- function(data, process, bias = no_bias(), settings = list()) {
   # what format do the data take?
   is_matrix_like <- is.data.frame(data) | is.matrix(data)
   is_list <- is.list(data) & !is_matrix_like
-  not_ok <- !is_matrix_like & !is.list
+  not_ok <- !is_matrix_like & !is_list
   
   if (not_ok)
     stop("age_abundance data must be a matrix, data.frame, or list", call. = FALSE) 
@@ -159,7 +159,7 @@ stage_abundance <- function(data, process, bias = no_bias(), settings = list()) 
   # what format do the data take?
   is_matrix_like <- is.data.frame(data) | is.matrix(data)
   is_list <- is.list(data) & !is_matrix_like
-  not_ok <- !is_matrix_like & !is.list
+  not_ok <- !is_matrix_like & !is_list
   
   if (not_ok)
     stop("stage_abundance data must be a matrix, data.frame, or list", call. = FALSE) 
