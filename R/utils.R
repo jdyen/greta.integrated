@@ -241,3 +241,12 @@ all_equal <- function (..., tolerance = 1e-10) {
   all(out)
   
 }
+
+# hist function to handle missing data and return counts only
+hist_fn <- function(x, breaks) {
+  out <- rep(0, length(breaks) - 1)
+  if (length(x) & !all(is.na(x))) {
+    out <- hist(x, plot = FALSE, breaks = breaks)$counts
+  }
+  out
+}

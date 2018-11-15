@@ -65,21 +65,47 @@ integrated_model <- function(...) {
   any_predictors <- any(is_predictor)
   
   # how many different process models are we dealing with?
-  process_list <- sapply(data_modules, function(x) x$process$hash)
-  unique_process_hash <- unique(process_list)
+  process_hash <- sapply(data_modules, function(x) x$process$hash)
+  unique_process_hash <- unique(process_hash)
   n_process <- length(unique_process_hash)
-  process_id <- match(process_list, unique_process_hash)
+  process_id <- match(process_hash, unique_process_hash)
 
-  # we need to build each process
-  unique_processes <- lapply(data_modules[unique(process_id)], function(x) x$process)
-  
-  # do any of these processes have predictors?
-  if (any_predictors)
-    includes_predictors <- unique(process_id[is_predictor])
+  # check that we haven't doubled up on predictors
+  if (any_predictors) {
+    process_predictors <- tapply(is_predictor, process_id, sum)
+    if (any(process_predictors) > 1)
+      stop("cannot assign multiple sets of predictors to the same process", call. = FALSE)
+  }
+      
+  # let's work through the processes one-by-one
+  for (i in seq_len(n_process)) {
+    
+    # pull out any process that matches hash i
+    process_list[[i]] <- data_modules[[which(process_id == i)[1]]]$process
+    
+    # does this have predictors?
+    includes_predictors <- i %in% process_id[is_predictor]
+    
+    # if it includes predictors, we need to massage the structure carefully
+    if (includes_predictors) {
+      
+      # pull out the predictor data set (can't be more than one per process)
+      predictors <- data_module[[which(process_id == i & is_predictor)]]
+      
+      # pull together a set of parameters based on the details of this process
+      parameters[[i]] <- define_parameters(process_list[[i]]$classes, process_list[[i]]$priors, process_list[[i]]$masks, predictors)
+      
+    } else {
+      
+      # pull together a set of parameters based on the details of this process
+      parameters[[i]] <- define_parameters(process_list[[i]]$classes, process_list[[i]]$priors, process_list[[i]]$masks)
+      
+    }
+    
+    
+  }
 
-  # initialise mu values
-  mu_param <- NULL
-  
+  ### PARAMETERS are with the processes??
   # create a named parameters list to pass to all likelihood calcs
   parameters <- list(n_obs,
                      n_iter,
@@ -93,11 +119,15 @@ integrated_model <- function(...) {
                      bias)
 
   # subset data_modules to those that aren't predictors
-  if (any_predictors)
+  if (any_predictors) {
     data_modules <- data_modules[!is_predictor]
+    process_id <- process_id[!is_predictor]
+  }
   
   for (i in seq_along(data_modules)) {
-    
+  
+    process_tmp <- process_list[[process_id[i]]]
+      
     data_tmp <- data_modules[[i]]
 
     # switch based on type
