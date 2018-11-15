@@ -41,56 +41,86 @@
 #' 
 integrated_model <- function(...) {
 
+  # collect inputs
   data_modules <- list(...)
 
-  # any make-or-break errors? Kill these first
-  # anything not an integrated_data object?
+  # is everything an integrated_data object?
+  if(!all(sapply(data_modules, is.integrated_data)))
+    stop("integrated_model only takes integrated_data objects as arguments", call. = FALSE)
 
-  # any data_modules not currently implemented ("community", what else?)
+  # which data types are we dealing with?
+  data_types <- sapply(data_modules, function(x) x$data_type)
   
+  # are all of these implemented?
+  implemented <- c("age_abundance", "stage_abundance", "age_recapture",
+                   "stage_recapture", "stage_to_age", "age_to_stage",
+                   "predictors")
+  if (!all(data_types %in% implemented)) {
+    problem_types <- data_types[!(data_types %in% implemented))]
+    stop(paste0("one or more data types are not currently implemented (", paste(problem_types, collapse = ", "), ")"), call. = FALSE)
+  }
   
   # are any data modules predictors? Deal with this second (expand process)
+  is_predictor <- data_types == "predictors"
+  any_predictors <- any(is_predictor)
   
+  # how many different process models are we dealing with?
+  process_list <- sapply(data_modules, function(x) x$process$hash)
+  unique_processes <- unique(process_list)
+  n_process <- length(unique_processes)
+  process_id <- match(process_list, unique_processes)
   
-  # check process models  
+  # how many different bias models are we dealing with?
+  bias_list <- sapply(data_modules, function(x) x$bias$hash)
+  unique_biases <- unique(bias_list)
+  n_bias <- length(unique_biases)
+  bias_id <- match(bias_list, unique_biases)
   
-  # check process models are all the same
-  ## NEED A STRING FOR THIS?
-  ## USE identical()
-  process_list <- sapply(data_modules, extract_process)
-  if (length(unique(process_list) > 1))
-    stop(paste0("data are connected to ", length(unique(process_list)), " different processes"), call. = FALSE)
-  
-  # check the bias layers -- should share params where needed
+  # how many different forms of density dependence are we dealing with?
+  density_list <- sapply(data_modules, function(x) x$process$density$hash)
+  unique_densities <- unique(density_list)
+  n_density <- length(unique_densities)
+  density_id <- match(density_list, unique_densities)
   
   # DEFINE PROCESS
   # expand to use multiple processes      
   process <- process_list[1]
   # have to add greta array setup here
   ###
-  
+
   # initialise mu values
   mu_param <- NULL
   
   # create a named parameters list to pass to all likelihood calcs
-  parameters <- list(survival = survival,
-                     fecundity = fecundity)
+  parameters <- list(n_obs,
+                     n_iter,
+                     classes,
+                     matrix,
+                     inits,
+                     density,
+                     process_class,
+                     age_to_stage_conversion,
+                     stage_to_age_conversion,
+                     bias)
 
   # subset data_modules to those that aren't predictors
-  data_modules_response <- data_modules[not_predictors]
+  if (any_predictors)
+    data_modules <- data_modules[!is_predictor]
   
-  for (i in seq_along(data_modules_response)) {
+  for (i in seq_along(data_modules)) {
     
-    data_tmp <- data_modules_response[[i]]
+    data_tmp <- data_modules[[i]]
 
     # switch based on type
     loglik_fun <- switch(data_tmp$type,
                          age_abundance = age_abundance_loglik,
                          stage_abundance = stage_abundance_loglik,
-                         age_recapture = age_recapture_loglik,
-                         stage_recapture = stage_recapture_loglik,
-                         size_to_age = size_to_age_loglik,
-                         age_to_size = age_to_size_loglik)
+                         binned_age_recapture = binned_age_recapture_loglik,
+                         binned_stage_recapture = binned_stage_recapture_loglik,
+                         binary_age_recapture = binary_age_recapture_loglik,
+                         binary_stage_recapture = binary_stage_recapture_loglik,
+                         stage_to_age = stage_to_age_loglik,
+                         age_to_stage = age_to_stage_loglik)
     
     # calculate
     loglik_fun(data_tmp$data, parameters)

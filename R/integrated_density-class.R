@@ -48,6 +48,9 @@ ricker <- function(parameters = uniform(0, 1)) {
   density <- list(form = form,
                   parameters = parameters)
   
+  # add a density hash
+  density$hash <- paste(sample(c(LETTERS, letters, seq_len(10) - 1), size = 20, replace = TRUE), collapse = "")
+  
   # return outputs
   as.integrated_density(density)
   
@@ -67,6 +70,9 @@ bh <- function(parameters = uniform(0, 1)) {
   density <- list(form = form,
                   parameters = parameters)
   
+  # add a density hash
+  density$hash <- paste(sample(c(LETTERS, letters, seq_len(10) - 1), size = 20, replace = TRUE), collapse = "")
+  
   # return outputs
   as.integrated_density(density)
   
@@ -85,6 +91,9 @@ no_density <- function(parameters = NULL) {
   # collate and return outputs  
   density <- list(form = form,
                   parameters = parameters)
+  
+  # add a density hash
+  density$hash <- paste(sample(c(LETTERS, letters, seq_len(10) - 1), size = 20, replace = TRUE), collapse = "")
   
   # return outputs
   as.integrated_density(density)

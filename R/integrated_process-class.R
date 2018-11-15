@@ -162,6 +162,9 @@ unstructured <- function(classes, density = no_density(), priors = list(), masks
                   priors = prior_list,
                   masks = mask_list)
   
+  # add a process hash
+  process$hash <- paste(sample(c(LETTERS, letters, seq_len(10) - 1), size = 20, replace = TRUE), collapse = "")
+  
   # return outputs
   as.integrated_process(process)
   
@@ -198,6 +201,9 @@ ipm <- function(classes, density = no_density(), priors = list()) {
                   density = density,
                   priors = prior_list)
   
+  # add a process hash
+  process$hash <- paste(sample(c(LETTERS, letters, seq_len(10) - 1), size = 20, replace = TRUE), collapse = "")
+  
   # return outputs
   as.integrated_process(process)
   
@@ -226,6 +232,9 @@ occupancy <- function(classes, density = no_density(), priors = list()) {
                   classes = classes,
                   density = density,
                   priors = prior_list)
+  
+  # add a process hash
+  process$hash <- paste(sample(c(LETTERS, letters, seq_len(10) - 1), size = 20, replace = TRUE), collapse = "")
   
   # return outputs
   as.integrated_process(process)
