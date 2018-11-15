@@ -4,6 +4,7 @@
 \alias{integrated_density}
 \alias{ricker}
 \alias{beverton}
+\alias{element_wise}
 \alias{no_density}
 \alias{is.integrated_density}
 \alias{print.integrated_density}
@@ -15,7 +16,9 @@ ricker(parameters = uniform(0, 1))
 
 beverton(parameters = uniform(0, 1))
 
-no_density(parameters = NULL)
+element_wise(parameters = uniform(0, 1), masks = list())
+
+no_density(parameters = uniform(0, 1))
 
 is.integrated_density(object)
 
