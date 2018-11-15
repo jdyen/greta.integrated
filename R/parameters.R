@@ -57,7 +57,7 @@ define_parameters <- function(classes, priors, masks, process_type, predictors =
     }
 
     # construct population matrix
-    mat <- zeros(n_obs, classes, classes)
+    mat1 <- mat2 <- mat3 <- zeros(classes, classes)
     
     # vectorise matrix fill: survival
     idx <- which(masks$survival == 1) - 1
@@ -96,19 +96,19 @@ define_parameters <- function(classes, priors, masks, process_type, predictors =
     inits <- change_dims(priors$initials, c(classes, 1L))
    
     # construct population matrix
-    mat <- zeros(classes, classes)
+    mat1 <- mat2 <- mat3 <- zeros(classes, classes)
     
     # vectorise matrix fill: survival
     idx <- which(masks$survival == 1)
-    mat1[idx] <- survival_all
+    mat1[idx] <- survival
     
     # vectorise matrix fill: transition
     idx <- which(masks$transition == 1)
-    mat2[idx] <- transition_all
+    mat2[idx] <- transition
     
     # vectorise matrix fill: fecundity
     idx <- which(masks$fecundity == 1)
-    mat3[idx] <- fecundity_all
+    mat3[idx] <- fecundity
 
     # combine survival, transition, and fecundity    
     mat <- mat1 + mat2 + mat3
@@ -124,7 +124,7 @@ define_parameters <- function(classes, priors, masks, process_type, predictors =
   }
   
   # return outputs
-  list(n_obs = n_obs, n_iter = n_iter, classes = classes,
+  list(n_obs = n_obs, classes = classes,
        matrix = mat, inits = inits,
        age_to_stage_conversion = age_stage,
        stage_to_age_conversion = stage_age)

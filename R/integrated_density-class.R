@@ -21,7 +21,7 @@
 #' @import greta
 #' 
 #' @examples
-#' \dontrun {
+#' \dontrun{
 #' 
 #' library(integrated)
 #' 
@@ -29,7 +29,7 @@
 #' process <- leslie(5, density = ricker(lambda = uniform(0, 1)))
 #' 
 #' # setting custom priors
-#' process <- leslie(5, density = bh(lambda = uniform(0, 1)),
+#' process <- leslie(5, density = beverton(lambda = uniform(0, 1)),
 #'                   priors = list(survival = ilogit(normal(0, 1)),
 #'                                 fecundity = exp(normal(0, 1))))
 #' }
@@ -56,7 +56,7 @@ ricker <- function(parameters = uniform(0, 1)) {
 #' @export
 #' @rdname integrated_density
 #' 
-bh <- function(parameters = uniform(0, 1)) {
+beverton <- function(parameters = uniform(0, 1)) {
   
   # specify functional form
   form <- function(x, params) {

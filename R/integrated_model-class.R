@@ -79,6 +79,7 @@ integrated_model <- function(...) {
       
   # let's work through the processes one-by-one
   process_list <- vector("list", length = n_process)
+  parameters <- vector("list", length = n_process)
   for (i in seq_len(n_process)) {
     
     # pull out any process that matches hash i

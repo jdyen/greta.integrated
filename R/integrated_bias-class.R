@@ -23,7 +23,7 @@
 #' @import greta
 #' 
 #' @examples
-#' \dontrun {
+#' \dontrun{
 #' 
 #' library(integrated)
 #' 

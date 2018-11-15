@@ -3,7 +3,7 @@
 \name{integrated_density}
 \alias{integrated_density}
 \alias{ricker}
-\alias{bh}
+\alias{beverton}
 \alias{no_density}
 \alias{is.integrated_density}
 \alias{print.integrated_density}
@@ -13,7 +13,7 @@
 \usage{
 ricker(parameters = uniform(0, 1))
 
-bh(parameters = uniform(0, 1))
+beverton(parameters = uniform(0, 1))
 
 no_density(parameters = NULL)
 
@@ -50,7 +50,7 @@ Prior distributions can be specified as single-dimensional
   with an inverse-logit link.
 }
 \examples{
-\dontrun {
+\dontrun{
 
 library(integrated)
 
@@ -58,7 +58,7 @@ library(integrated)
 process <- leslie(5, density = ricker(lambda = uniform(0, 1)))
 
 # setting custom priors
-process <- leslie(5, density = bh(lambda = uniform(0, 1)),
+process <- leslie(5, density = beverton(lambda = uniform(0, 1)),
                   priors = list(survival = ilogit(normal(0, 1)),
                                 fecundity = exp(normal(0, 1))))
 }

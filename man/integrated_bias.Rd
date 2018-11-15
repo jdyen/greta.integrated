@@ -47,7 +47,7 @@ Prior distributions can be specified as single-dimensional
   with an inverse-logit link.
 }
 \examples{
-\dontrun {
+\dontrun{
 
 library(integrated)
 
