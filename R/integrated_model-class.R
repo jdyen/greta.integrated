@@ -172,14 +172,14 @@ integrated_model <- function(...) {
 #' @rdname integrated_model
 #' 
 is.integrated_model <- function(object) {
-  inherits(object, 'integrated_model')
+  inherits(object, "integrated_model")
 }
 
 #' @export
 #' @rdname integrated_model
 #' 
 print.integrated_model <- function(x, ...) {
-  cat(paste0('This is an integrated_model object\n'))
+  cat(paste0("This is an integrated_model object\n"))
 }
 
 #' @export

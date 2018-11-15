@@ -273,7 +273,7 @@ plot.integrated_process <- function(x, ...) {
   surv <- x$masks$survival
   tran <- x$masks$transition
   fec <- x$masks$fecundity
-  
+
   # do any overlap?
   all <- surv + tran + fec
   overlap <- any(all > 1)
@@ -283,15 +283,93 @@ plot.integrated_process <- function(x, ...) {
   col_mat <- ifelse(tran, 2, col_mat)
   col_mat <- ifelse(fec, 3, col_mat)
   
+  # set a colour palette
+  col_pal <- c("gray95", "#57A0D3", "#1D2951", "#0E4D92", "#EF820D", "#BE5504", "#FDA50F", "#0b6623")
+  
   # easy if they don't overlap
   if (!overlap) {
 
+    # pull out old settings to restore
+    old_mar <- par()$mar
+
+    # remove ridiculously wide borders
+    par(mar = c(5, 3, 0.1, 0.1))
+    
     # plot with colours according to col_mat
-    image(col_mat, col = c("white", "blue", "darkblue", "lightblue"))
+    image(t(col_mat),
+          col = col_pal[1:4],
+          xaxt = "n", yaxt = "n",
+          bty = "n")
+    
+    # add a legend
+    legend(0.5, -0.22, xpd = TRUE,
+           fill = col_pal,
+           horiz = TRUE,
+           border = c("gray70", col_pal[2:4]),
+           bty = "n",
+           cex = 1.25,
+           xjust = 0.5,
+           legend = c("none", "survival", "transition", "fecundity"))
+    
+    # add some labels
+    type <- ifelse(x$type == "leslie", "Age", "Stage")
+    mtext(paste0(type, " at time t"), side = 1, adj = 0.5, line = 1, cex = 1.5)
+    mtext(paste0(type, " at time t + 1"), side = 2, adj = 0.5, line = 1, cex = 1.5)
+    
+    # mark low and high ends
+    mtext("Low", side = 1, adj = 0.01, line = 0.2, cex = 1)
+    mtext("High", side = 1, adj = 0.99, line = 0.2, cex = 1)
+    mtext("Low", side = 2, adj = 0.01, line = 0.2, cex = 1)
+    mtext("High", side = 2, adj = 0.99, line = 0.2, cex = 1)
+    
+    # reset plot settings
+    par(mar = old_mar)
     
   } else {
     
-    col_mat[all > 1] <- col_mat[all > 1] + 3
+    # add some new colours if they overlap
+    col_mat[surv + tran == 2] <- 4
+    col_mat[surv + fec == 2] <- 5
+    col_mat[tran + fec == 2] <- 6
+    col_mat[all == 3] <- 7
+    
+    # pull out old settings to restore
+    old_mar <- par()$mar
+    
+    # remove ridiculously wide borders
+    par(mar = c(5, 3, 0.1, 0.1))
+    
+    # plot with colours according to col_mat
+    image(t(col_mat),
+          col = col_pal,
+          xaxt = "n", yaxt = "n",
+          bty = "n")
+    
+    # add a legend
+    legend(0.5, -0.22, xpd = TRUE,
+           fill = col_pal,
+           horiz = TRUE,
+           border = c("gray70", col_pal[2:8]),
+           bty = "n",
+           cex = 1,
+           xjust = 0.5,
+           legend = c("none", "surv", "trans", "fec",
+                      "su/tr", "su/fe", "tr/fe",
+                      "all"))
+    
+    # add some labels
+    type <- ifelse(x$type == "leslie", "Age", "Stage")
+    mtext(paste0(type, " at time t"), side = 1, adj = 0.5, line = 1, cex = 1.5)
+    mtext(paste0(type, " at time t + 1"), side = 2, adj = 0.5, line = 1, cex = 1.5)
+    
+    # mark low and high ends
+    mtext("Low", side = 1, adj = 0.01, line = 0.2, cex = 1)
+    mtext("High", side = 1, adj = 0.99, line = 0.2, cex = 1)
+    mtext("Low", side = 2, adj = 0.01, line = 0.2, cex = 1)
+    mtext("High", side = 2, adj = 0.99, line = 0.2, cex = 1)
+    
+    # reset plot settings
+    par(mar = old_mar)
     
   }
   

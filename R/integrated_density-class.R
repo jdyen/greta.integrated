@@ -75,6 +75,31 @@ beverton <- function(parameters = uniform(0, 1)) {
 #' @export
 #' @rdname integrated_density
 #' 
+element_wise <- function(parameters = uniform(0, 1), masks = list()) {
+  
+  ### WHAT IS EVEN REASONABLE FOR THIS SORT OF SETUP?
+  
+  # setup masking matrices
+  mask_list <- list()
+  mask_list[names(masks)] <- masks
+  
+  # specify functional form
+  form <- function(x, params) {
+    1.0 / (1.0 + x * params)
+  }
+  
+  # collate and return outputs  
+  density <- list(form = form,
+                  parameters = parameters)
+  
+  # return outputs
+  as.integrated_density(density)
+  
+}
+
+#' @export
+#' @rdname integrated_density
+#' 
 no_density <- function(parameters = uniform(0, 1)) {
   
   # specify functional form
