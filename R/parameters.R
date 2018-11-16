@@ -69,13 +69,20 @@ define_parameters <- function(classes, priors, masks, process_type, predictors =
     idy <- n_obs * rep(idx, each = n_obs) + seq_len(n_obs)
     mat2[idy] <- transition_all
 
+    # need to standardise survival and transition matrices
+    mat4 <- mat1 + mat2
+    sweep_sums <- apply(mat4, c(1, 3), "sum")
+    mat4 <- sweep(mat4, c(1, 3), sweep_sums, "/")
+    sweep_survival <- beta(1, 1, c(n_obs, classes))
+    mat4 <- sweep(mat4, c(1, 3), sweep_survival, "*")
+    
     # vectorise matrix fill: fecundity
     idx <- which(masks$fecundity == 1) - 1
     idy <- n_obs * rep(idx, each = n_obs) + seq_len(n_obs)
     mat3[idy] <- fecundity_all
 
     # combine survival, transition, and fecundity    
-    mat <- mat1 + mat2 + mat3
+    mat <- mat3 + mat4
 
   } else {
     
@@ -106,12 +113,19 @@ define_parameters <- function(classes, priors, masks, process_type, predictors =
     idx <- which(masks$transition == 1)
     mat2[idx] <- transition
     
+    # need to standardise survival and transition matrices
+    mat4 <- mat1 + mat2
+    sweep_sums <- apply(mat4, 2, "sum")
+    mat4 <- sweep(mat4, 2, sweep_sums, "/")
+    sweep_survival <- beta(1, 1, classes)
+    mat4 <- sweep(mat4, 2, sweep_survival, "*")
+
     # vectorise matrix fill: fecundity
     idx <- which(masks$fecundity == 1)
     mat3[idx] <- fecundity
 
     # combine survival, transition, and fecundity    
-    mat <- mat1 + mat2 + mat3
+    mat <- mat3 + mat4
     
   }
   
@@ -127,6 +141,7 @@ define_parameters <- function(classes, priors, masks, process_type, predictors =
   list(n_obs = n_obs, classes = classes,
        matrix = mat, inits = inits,
        survival = survival, transition = transition, fecundity = fecundity,
+       sweep_survival = sweep_survival,
        age_to_stage_conversion = age_stage, stage_to_age_conversion = stage_age)
   
 }
