@@ -40,15 +40,15 @@
 #' @export
 #' @rdname integrated_process
 #' 
-leslie <- function(classes, density = no_density(), priors = list()) {
+leslie <- function(classes, density = no_density(), priors = list(), masks = list()) {
   
   # set default masking for a leslie matrix
-  masks <- list(survival = ifelse(row(diag(classes)) == classes & col(diag(classes)) == classes, 1, 0),
-                    transition = ifelse(row(diag(classes)) == col(diag(classes)) + 1, 1, 0),
+  mask_list <- list(transition = ifelse(row(diag(classes)) == col(diag(classes)) + 1 | row(diag(classes)) == classes & col(diag(classes)) == classes, 1, 0),
                     fecundity = ifelse(row(diag(classes)) == 1 & col(diag(classes)) != 1, 1, 0))
+  mask_list[names(masks)] <- masks
   
   # create an unstructured matrix with these masks
-  process <- unstructured(classes = classes, density = density, priors = priors, masks = masks)
+  process <- unstructured(classes = classes, density = density, priors = priors, masks = mask_list)
   
   # set type appropriately
   process$type <- "leslie"
@@ -61,15 +61,15 @@ leslie <- function(classes, density = no_density(), priors = list()) {
 #' @export
 #' @rdname integrated_process
 #' 
-lefkovitch <- function(classes, density = no_density(), priors = list()) {
+lefkovitch <- function(classes, density = no_density(), priors = list(), masks = list()) {
   
   # set default masking
-  masks <- list(survival = diag(classes),
-                transition = ifelse(row(diag(classes)) == col(diag(classes)) + 1, 1, 0),
-                fecundity = ifelse(row(diag(classes)) == 1 & col(diag(classes)) != 1, 1, 0))
+  mask_list <- list(transition = ifelse(row(diag(classes)) == col(diag(classes)) + 1 | diag(classes), 1, 0),
+                    fecundity = ifelse(row(diag(classes)) == 1 & col(diag(classes)) != 1, 1, 0))
+  mask_list[names(masks)] <- masks
   
   # create an unstructured matrix with these masks
-  process <- unstructured(classes = classes, density = density, priors = priors, masks = masks)
+  process <- unstructured(classes = classes, density = density, priors = priors, masks = mask_list)
   
   # set type appropriately
   process$type <- "lefkovitch"
@@ -82,9 +82,9 @@ lefkovitch <- function(classes, density = no_density(), priors = list()) {
 #' @export
 #' @rdname integrated_process
 #' 
-age <- function(classes, density = no_density(), priors = list()) {
+age <- function(classes, density = no_density(), priors = list(), masks = list()) {
   
-  leslie(classes, density, priors)
+  leslie(classes, density, priors, masks)
   
 }
 
@@ -94,8 +94,7 @@ age <- function(classes, density = no_density(), priors = list()) {
 stage <- function(classes, density = no_density(), priors = list(), masks = list()) {
   
   # set default masking
-  mask_list <- list(survival = diag(classes),
-                    transition = ifelse(row(diag(classes)) == col(diag(classes)) + 1, 1, 0),
+  mask_list <- list(transition = ifelse(row(diag(classes)) == col(diag(classes)) + 1 | diag(classes), 1, 0),
                     fecundity = ifelse(row(diag(classes)) == 1 & col(diag(classes)) != 1, 1, 0))
   
   # overwrite defaults with user-specified masks
@@ -135,8 +134,7 @@ unstructured <- function(classes, density = no_density(), priors = list(), masks
   prior_list[names(priors)] <- priors
   
   # set default masking
-  mask_list <- list(survival = diag(classes),
-                    transition = matrix(1, nrow = classes, ncol = classes) - diag(classes),
+  mask_list <- list(transition = matrix(1, nrow = classes, ncol = classes),
                     fecundity = ifelse(row(diag(classes)) == 1 & col(diag(classes)) != 1, 1, 0))
   
   # overwrite defaults with user-specified masks
