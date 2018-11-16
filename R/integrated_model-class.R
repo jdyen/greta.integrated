@@ -94,6 +94,8 @@ integrated_model <- function(...) {
       if (length(unique(n_predictors)) > 1)
         stop("all data modules that share a single process must have the same number of predictors", call. = FALSE)
       
+      n_predictors <- unique(n_predictors)
+      
     }
 
     # pull out any process that matches hash i
@@ -132,20 +134,16 @@ integrated_model <- function(...) {
 
   for (i in seq_along(data_modules)) {
   
+    # pull out a temporary subset process to work with
+    parameters_tmp <- parameters[[process_id[i]]]
+    
     # prepare matrix
-    parameters[[process_id[i]]]$matrix <- construct_matrix(data_modules[[i]], parameters[[process_id[i]]])
+    parameters_tmp$matrix <- construct_matrix(data_modules[[i]], parameters[[process_id[i]]])
     
     # we need to add a couple of things from the process module
-    parameters[[process_id[i]]]$density <- process_list[[process_id[i]]]$density
-    parameters[[process_id[i]]]$process_class <- process_list[[process_id[i]]]$type
+    parameters_tmp$density <- process_list[[process_id[i]]]$density
+    parameters_tmp$process_class <- process_list[[process_id[i]]]$type
 
-    # make parameters cleaner if predictors are included (ops were kept separate for convenience)
-    if (!is.null(parameters[[process_id[i]]]$n_predictors)) {
-      parameters[[process_id[i]]]$survival <- parameters[[process_id[i]]]$survival$children[[1]]
-      parameters[[process_id[i]]]$transition <- parameters[[process_id[i]]]$transition$children[[1]]
-      parameters[[process_id[i]]]$fecundity <- parameters[[process_id[i]]]$fecundity$children[[1]]
-    }
-    
     # choose appropriate likelihood based on type of data
     loglik_fun <- switch(data_modules[[i]]$data_type,
                          age_abundance = age_abundance_loglik,
@@ -158,9 +156,18 @@ integrated_model <- function(...) {
                          age_to_stage = age_to_stage_loglik)
     
     # define likelihood (doesn't return anything)
-    loglik_fun(data_modules[[i]], parameters[[process_id[i]]])
+    loglik_fun(data_modules[[i]], parameters_tmp)
     
   } 
+  
+  # make parameters cleaner if predictors are included (ops were kept separate for convenience)
+  for (i in seq_len(n_process)) {
+    if (!is.null(parameters[[i]]$n_predictors)) {
+      parameters[[i]]$survival <- parameters[[i]]$survival$children[[1]]
+      parameters[[i]]$transition <- parameters[[i]]$transition$children[[1]]
+      parameters[[i]]$fecundity <- parameters[[i]]$fecundity$children[[1]]
+    }
+  }
   
   # return a clean list of parameters
   names(parameters) <- paste0("process_", number_to_word(seq_len(n_process)))
