@@ -27,13 +27,15 @@
 #' plot(model)
 #' }
 
-#' @export
+#' @export initialise
 #' @rdname greta_interface
 #' 
 initialise <- function(object) {
   UseMethod("initialise")
 }
 
+#' @method initialise greta_model
+#' @export
 # internal function: prepare greta initials from integrated_model
 initialise.greta_model <- function(object) {
   
@@ -48,6 +50,8 @@ initialise.greta_model <- function(object) {
 
 }
 
+#' @method initialise default
+#' @export
 # internal function: prepare greta initials from integrated_model
 initialise.default <- function(object) {
   
@@ -72,11 +76,11 @@ initialise_internal <- function(x) {
     finite_bounds <- bounds[is.finite(bounds)]
 
     # if not, just set them to zero    
-    out <- zeros(dim(x))
+    out <- array(0, dim = dim(x))
     
     # if they are, use the mean of two values or the single finite value
     if (length(finite_bounds))
-      out <- greta_array(mean(finite_bounds), dim(x))
+      out <- array(mean(finite_bounds), dim = dim(x))
     
   }
   
