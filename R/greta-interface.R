@@ -75,13 +75,26 @@ initialise_internal <- function(x) {
     # work out if the bounds are finite
     finite_bounds <- bounds[is.finite(bounds)]
 
-    # if not, just set them to zero    
+    # is either bound positive or negative inf?
+    is_inf <- is.infinite(bounds)
+    is_pos_inf <- is_inf & bounds > 0
+    is_neg_inf <- is_inf & bounds < 0
+    
+    # start at zero, keep it this way if both bounds are inf
     out <- array(0, dim = dim(x))
     
-    # if they are, use the mean of two values or the single finite value
-    if (length(finite_bounds))
+    # if both bounds are finite, use the mean to set a starting condition
+    if (length(finite_bounds) == 2)
       out <- array(mean(finite_bounds), dim = dim(x))
     
+    # if one of the bounds is real and the other is positive infinite, set all inits to 1
+    if (length(finite_bounds) & any(is_pos_inf))
+      out <- array(1.0, dim = dim(x))
+    
+    # if one of the bounds is real and the other is negative infinite, set all inits to -1
+    if (length(finite_bounds) & any(is_neg_inf))
+      out <- array(-1.0, dim = dim(x))
+
   }
   
   # return outputs

@@ -105,7 +105,7 @@ change_dims_distrib <- function(node, new_dim) {
     params <- lapply(params, function(x) as.numeric(x))
   
   # what are the arguments required for this distribution?
-  arglist <- names(formals(node$initialize))
+  arglist <- names(formals(node$distribution$initialize))
   
   # we need to add a new dim argument to univariate parameters
   if (!is_multivariate) {
@@ -124,7 +124,7 @@ change_dims_distrib <- function(node, new_dim) {
   # do we also need to truncate the distribution?
   if ("truncation" %in% arglist)
     params$truncation <- c(lower, upper)
-  
+
   # now we need a new distribution with these parameters
   new_distrib <- do.call(distribution_name, params)
   
