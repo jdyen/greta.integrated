@@ -23,6 +23,7 @@
 #' @export
 #' 
 #' @import greta
+#' @import greta.dynamics
 #' 
 #' @examples
 #' \dontrun{
@@ -77,7 +78,7 @@ age_abundance <- function(data, process, bias = no_bias(), settings = list()) {
       classes_alt <- nrow(data_clean)
     }
 
-    # what if there isn't one column per class?
+    # what if there is not one column per class?
     if (nrow(data) != process$classes & process_class != "stage") {
       
       # edge case: data are total abundances through time; need to use a different function
@@ -105,7 +106,7 @@ age_abundance <- function(data, process, bias = no_bias(), settings = list()) {
       
     } else {  # elements differ in length, probably have individual ages
       
-      # can't handle ages older than number of classes
+      # cannot handle ages older than number of classes
       if (max(data) > process$classes) {
         warning(paste0("some individuals are older than the total number of classes; ages will be truncated to a maximum of ", process$classes), call. = FALSE)
         data <- ifelse(data > process$classes, process$classes, data)
@@ -178,7 +179,7 @@ stage_abundance <- function(data, process, bias = no_bias(), settings = list()) 
       classes_alt <- nrow(data_clean)
     }
     
-    # potentially reformat data if there isn't one column per class
+    # potentially reformat data if there is not one column per class
     if (nrow(data) != process$classes & process_class != "age") {
       
       # edge case: data are total abundances through time; need to use a different function
@@ -205,7 +206,7 @@ stage_abundance <- function(data, process, bias = no_bias(), settings = list()) 
       
     } else {  # elements differ in length, probably have individual ages
       
-      # can't handle ages older than number of classes
+      # cannot handle ages older than number of classes
       if (max(data) > process$classes)
         stop(paste0("there are ", max(data), " stages and ", process$classes, " classes; the number of stages should not exceed the number of classes"), call. = FALSE)
 
@@ -260,14 +261,14 @@ age_recapture <- function(data, process, bias = no_bias(), settings = list()) {
   is_binary <- all(unique(data) %in% c(0, 1))
   is_binned <- all(unique(data) %in% seq_len(process$classes))
   
-  # if data aren't binned we need to bin them
+  # if data are not binned we need to bin them
   if (!is_binary & !is_binned)
     stop(paste0("range of data does not match the number of classes (", process$classes, ")"), call. = FALSE)
   
   # can only do so much with binary data
   if (is_binary) {
     
-    # let the user know that we don't like binary data
+    # let the user know that we do not like binary data
     cat(paste0("binary capture histories can only inform detection and total survival probabilities\n"))
     
     # return what we have
@@ -349,10 +350,10 @@ stage_recapture <- function(data, process, bias = no_bias(), settings = list()) 
   is_binary <- all(unique(data) %in% c(0, 1))
   is_binned <- all(unique(data) %in% seq_len(process$classes))
   
-  # if data aren't binned we need to bin them
+  # if data are not binned we need to bin them
   if (!is_binary & !is_binned) {
     
-    # this won't work if we don't have breaks
+    # this will not work if we do not have breaks
     if (is.null(all_settings$breaks))
       stop("data do not appear to be binned or binary; attempted to bin data but breaks were not provided", call. = FALSE)
 
@@ -376,7 +377,7 @@ stage_recapture <- function(data, process, bias = no_bias(), settings = list()) 
   # can only do so much with binary data
   if (is_binary) {
     
-    # let the user know that we don't like binary data
+    # let the user know that we do not like binary data
     cat(paste0("binary capture histories can only inform detection and total survival probabilities\n"))
     
     # return what we have
@@ -443,7 +444,7 @@ stage_to_age <- function(x, ...) {
 
 stage_to_age.formula <- function(x, data, process, bias = no_bias(), settings = list()) {
   
-  # this won't work if we haven't got a Leslie matrix process
+  # this will not work if we have not got a Leslie matrix process
   if (process$type != "leslie")
     stop("trying to model ages from stage data without an age-based model; this seems like a bad idea", call. = FALSE)
   
@@ -457,7 +458,7 @@ stage_to_age.formula <- function(x, data, process, bias = no_bias(), settings = 
   response <- get(var_names[1], data)
   predictor <- get(var_names[2], data)
   
-  # basic checks to see we haven't missed something
+  # basic checks to see if we have missed something
   if (length(response) != length(predictor))
     stop(paste0(var_names[1], " and ", var_names[2], " should be the same length"), call. = FALSE)
   
@@ -511,7 +512,7 @@ stage_to_age.formula <- function(x, data, process, bias = no_bias(), settings = 
 
 stage_to_age.default <- function(x, process, bias = no_bias(), settings = list()) {
 
-  # this won't work if we haven't got a Leslie matrix process
+  # this will not work if we have not got a Leslie matrix process
   if (process$type != "leslie")
     stop("trying to model ages from stage data without an age-based model; this seems like a bad idea", call. = FALSE)
   
@@ -526,7 +527,7 @@ stage_to_age.default <- function(x, process, bias = no_bias(), settings = list()
   # what dims does x have?
   dims <- dim(x)
   
-  # if at least one of columns or rows don't line up with the number of classes, this won't work
+  # if at least one of columns or rows do not line up with the number of classes, this will not work
   if (!(process$classes %in% dims))
     stop(paste0("one dimension of stage-to-age data must match the number of classes in process (", process$classes, ")"), call. = FALSE)
 
@@ -568,7 +569,7 @@ age_to_stage <- function(x, ...) {
 
 age_to_stage.formula <- function(x, data, process, bias = no_bias(), settings = list()) {
   
-  # this won't work if we haven't got a stage-structured process model
+  # this will not work if we do not have a stage-structured process model
   if (process$type == "leslie")
     stop("trying to model stages from age data without a stage-based model; this seems like a bad idea", call. = FALSE)
   
@@ -582,7 +583,7 @@ age_to_stage.formula <- function(x, data, process, bias = no_bias(), settings = 
   response <- get(var_names[1], data)
   predictor <- get(var_names[2], data)
   
-  # basic checks to see we haven't missed something
+  # basic checks to see we missed something
   if (length(response) != length(predictor))
     stop(paste0(var_names[1], " and ", var_names[2], " should be the same length"), call. = FALSE)
   
@@ -636,7 +637,7 @@ age_to_stage.formula <- function(x, data, process, bias = no_bias(), settings = 
 
 age_to_stage.default <- function(x, process, bias = no_bias(), settings = list()) {
   
-  # this won't work if we haven't got a stage-structured process model
+  # this will not work if we do not have a stage-structured process model
   if (process$type == "leslie")
     stop("trying to model stages from age data without a stage-based model; this seems like a bad idea", call. = FALSE)
   
@@ -651,7 +652,7 @@ age_to_stage.default <- function(x, process, bias = no_bias(), settings = list()
   # what dims does x have?
   dims <- dim(x)
   
-  # if at least one of columns or rows don't line up with the number of classes, this won't work
+  # if at least one of columns or rows do not line up with the number of classes, this will not work
   if (!(process$classes %in% dims))
     stop(paste0("one dimension of age-to-stage data must match the number of classes in process (", process$classes, ")"), call. = FALSE)
   
