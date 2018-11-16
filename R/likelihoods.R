@@ -53,11 +53,12 @@ stage_abundance_loglik <- function(data, params) {
   stage_to_age <- params$stage_to_age_conversion
 
   # set up iterated states
-  if (length(dim(matrix)) == 3) {
+  if (length(dim(mat)) == 3) {
     iterated_states <- iterate_matrix_dynamic(matrix = mat, initial_state = inits, density = density)
   } else {
     n_iter <- ncol(data$data)
     iterated_states <- iterate_matrix(matrix = mat, initial_state = inits, niter = n_iter, density = density)
+    iterated_states <- iterated_states$all_states
   }
   
   # add a conversion step if we have stage-structured data
@@ -68,7 +69,7 @@ stage_abundance_loglik <- function(data, params) {
   }
   
   # create vectors of modelled and observed data
-  mu <- c(modelled_states$all_states)
+  mu <- c(modelled_states)
   observed_tmp <- as_data(c(data$data))
   
   # add bias transform if required

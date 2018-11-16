@@ -15,11 +15,13 @@
 \alias{plot.integrated_process}
 \title{create integrated process objects}
 \usage{
-leslie(classes, density = no_density(), priors = list())
+leslie(classes, density = no_density(), priors = list(),
+  masks = list())
 
-lefkovitch(classes, density = no_density(), priors = list())
+lefkovitch(classes, density = no_density(), priors = list(),
+  masks = list())
 
-age(classes, density = no_density(), priors = list())
+age(classes, density = no_density(), priors = list(), masks = list())
 
 stage(classes, density = no_density(), priors = list(),
   masks = list())

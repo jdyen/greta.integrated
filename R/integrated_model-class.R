@@ -20,6 +20,8 @@
 #' 
 #' @import greta
 #' @import greta.dynamics
+#' @import tensorflow
+#' @import methods
 #' 
 #' @examples
 #' \dontrun{

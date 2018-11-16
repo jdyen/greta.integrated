@@ -330,7 +330,7 @@ plot.integrated_process <- function(x, ...) {
     old_mar <- par()$mar
     
     # remove ridiculously wide borders
-    par(mar = c(5, 3, 0.1, 0.1))
+    par(mar = c(5, 3, 0.7, 0.7))
     
     # plot with colours according to col_mat
     image(t(col_mat),
@@ -351,7 +351,7 @@ plot.integrated_process <- function(x, ...) {
     # add some labels
     type <- ifelse(x$type == "leslie", "Age", "Stage")
     mtext(paste0(type, " at time t"), side = 1, adj = 0.5, line = 1, cex = 1.5)
-    mtext(paste0(type, " at time t + 1"), side = 2, adj = 0.5, line = 1, cex = 1.5)
+    mtext(paste0(type, " at time t + 1"), side = 2, adj = 0.5, line = 1.5, cex = 1.5)
     
     # mark low and high ends
     mtext("Low", side = 1, adj = 0.01, line = 0.2, cex = 1)

@@ -16,7 +16,9 @@ Depends:
     R (>= 3.0)
 Imports:
     greta,
-    greta.dynamics
+    greta.dynamics,
+    tensorflow,
+    methods
 Suggests:
     knitr,
     testthat,
