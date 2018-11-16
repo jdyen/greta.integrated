@@ -337,7 +337,6 @@ number_to_word <- function(x) {
 }
 
 # tensorflow einsum to replicate 3D sweep
-tf <- tensorflow::tf
 op <- greta::.internals$nodes$constructors$op
 
 rescale_array <- function(array, mat_div, mat_mul) {

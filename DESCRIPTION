@@ -13,9 +13,9 @@ BugReports: https://github.com/jdyen/greta.integrated/issues
 Encoding: UTF-8
 LazyData: true
 Depends:
-    R (>= 3.0)
+    R (>= 3.0),
+    greta
 Imports:
-    greta,
     greta.dynamics,
     tensorflow,
     methods
