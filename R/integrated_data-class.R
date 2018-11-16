@@ -42,7 +42,7 @@
 #' @export
 #' @rdname integrated_data
 #' 
-age_abundance <- function(data, process, bias = no_bias(), settings = list()) {
+age_abundance <- function(data, process, bias = no_bias(), settings = list(), predictors = NULL) {
 
   # need to unpack the settings
   all_settings <- list(breaks = NULL,
@@ -126,6 +126,11 @@ age_abundance <- function(data, process, bias = no_bias(), settings = list()) {
     
   }
   
+  if (!is.null(predictors)) {
+    predictors <- prepare_predictors(predictors)
+    warning("you need to check if predictors align with data_clean", call. = FALSE)
+  }
+
   # want to tie everything together in a single output
   data_module <- list(data = data_clean,
                       process = process, 
@@ -133,7 +138,8 @@ age_abundance <- function(data, process, bias = no_bias(), settings = list()) {
                       data_type = "age_abundance",
                       likelihood = all_settings$likelihood,
                       classes = classes,
-                      classes_alt = classes_alt)
+                      classes_alt = classes_alt,
+                      predictors = predictors)
   
   # return outputs with class definition
   as.integrated_data(data_module)
@@ -143,7 +149,7 @@ age_abundance <- function(data, process, bias = no_bias(), settings = list()) {
 #' @export
 #' @rdname integrated_data
 #' 
-stage_abundance <- function(data, process, bias = no_bias(), settings = list()) {
+stage_abundance <- function(data, process, bias = no_bias(), settings = list(), predictors = NULL) {
   
   # need to unpack the settings
   all_settings <- list(breaks = NULL,
@@ -224,6 +230,11 @@ stage_abundance <- function(data, process, bias = no_bias(), settings = list()) 
     
   }
   
+  if (!is.null(predictors)) {
+    predictors <- prepare_predictors(predictors)
+    warning("you need to check if predictors align with data_clean", call. = FALSE)
+  }
+
   # want to tie everything together in a single output
   data_module <- list(data = data_clean,
                       process = process, 
@@ -231,7 +242,8 @@ stage_abundance <- function(data, process, bias = no_bias(), settings = list()) 
                       data_type = "stage_abundance",
                       likelihood = all_settings$likelihood,
                       classes = classes,
-                      classes_alt = classes_alt)
+                      classes_alt = classes_alt,
+                      predictors = predictors)
   
   # return outputs with class definition
   as.integrated_data(data_module)
@@ -241,11 +253,15 @@ stage_abundance <- function(data, process, bias = no_bias(), settings = list()) 
 #' @export
 #' @rdname integrated_data
 #' 
-age_recapture <- function(data, process, bias = no_bias(), settings = list()) {
+age_recapture <- function(data, process, bias = no_bias(), settings = list(), predictors = NULL) {
   
   # need to unpack the settings
   all_settings <- list(likelihood = multinomial)
   all_settings[names(settings)] <- settings
+  
+  # warn that predictors are currently ignored for mark-recapture data
+  if (!is.null(predictors))
+    warning("predictors are not supported (yet) for age_recapture data; provided predictors will be ignored", call. = FALSE)
   
   # is the process model a stage or age based model?
   class_type <- ifelse(process$type == "leslie", "age", "stage")
@@ -329,12 +345,16 @@ age_recapture <- function(data, process, bias = no_bias(), settings = list()) {
 #' @export
 #' @rdname integrated_data
 #' 
-stage_recapture <- function(data, process, bias = no_bias(), settings = list()) {
+stage_recapture <- function(data, process, bias = no_bias(), settings = list(), predictors = NULL) {
   
   # need to unpack the settings
   all_settings <- list(breaks = NULL,
                        likelihood = multinomial)
   all_settings[names(settings)] <- settings
+  
+  # warn that predictors are currently ignored for mark-recapture data
+  if (!is.null(predictors))
+    warning("predictors are not supported (yet) for stage_recapture data; provided predictors will be ignored", call. = FALSE)
   
   # is the process model a stage or age based model?
   class_type <- ifelse(process$type == "leslie", "age", "stage")
@@ -442,6 +462,8 @@ stage_to_age <- function(x, ...) {
   UseMethod("stage_to_age")
 }
 
+#' @export
+#' @method stage_to_age formula
 stage_to_age.formula <- function(x, data, process, bias = no_bias(), settings = list()) {
   
   # this will not work if we have not got a Leslie matrix process
@@ -510,6 +532,8 @@ stage_to_age.formula <- function(x, data, process, bias = no_bias(), settings = 
   
 }
 
+#' @export
+#' @method stage_to_age default
 stage_to_age.default <- function(x, process, bias = no_bias(), settings = list()) {
 
   # this will not work if we have not got a Leslie matrix process
@@ -567,6 +591,8 @@ age_to_stage <- function(x, ...) {
   UseMethod("age_to_stage")
 }
 
+#' @export
+#' @method age_to_stage formula
 age_to_stage.formula <- function(x, data, process, bias = no_bias(), settings = list()) {
   
   # this will not work if we do not have a stage-structured process model
@@ -635,6 +661,8 @@ age_to_stage.formula <- function(x, data, process, bias = no_bias(), settings = 
   
 }
 
+#' @export
+#' @method age_to_stage default
 age_to_stage.default <- function(x, process, bias = no_bias(), settings = list()) {
   
   # this will not work if we do not have a stage-structured process model
@@ -690,7 +718,7 @@ age_to_stage.default <- function(x, process, bias = no_bias(), settings = list()
 #' 
 community <- function(data, process, bias = no_bias(), settings = list()) {
   
-  warning("community data are not currently implemented; this integrated_data object will be ignored in subsequent models", call. = FALSE)
+  stop("community data are not supported (yet)", call. = FALSE)
   
   # unpack settings
   all_settings <- list(likelihood = binomial)
@@ -708,14 +736,8 @@ community <- function(data, process, bias = no_bias(), settings = list()) {
   
 }
 
-#' @export
-#' @rdname integrated_data
-#' 
-predictors <- function(data, process, bias = no_bias(), settings = list()) {
-  
-  # unpack settings
-  all_settings <- list(likelihood = normal)
-  all_settings[names(settings)] <- settings
+# internal function: prepare predictors for other data sets
+prepare_predictors <- function(data) {
   
   # make sure predictor data are in a matrix or data.frame
   if (!is.matrix(data) & !is.data.frame(data))
@@ -736,16 +758,9 @@ predictors <- function(data, process, bias = no_bias(), settings = list()) {
   } else {
     data_clean <- data
   }
-  
-  # want to tie everything together in a single output
-  data_module <- list(data = data_clean,
-                      process = process, 
-                      bias = bias,
-                      data_type = "predictor",
-                      likelihood = all_settings$likelihood)
-  
+
   # return outputs
-  as.integrated_data(data_module)
+  data_clean
   
 } 
 

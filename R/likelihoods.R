@@ -2,8 +2,6 @@
 age_abundance_loglik <- function(data, params) {
 
   # unpack params
-  n_obs <- params$n_obs
-  classes <- params$classes
   density <- params$density
   mat <- params$matrix
   inits <- params$inits
@@ -44,8 +42,6 @@ age_abundance_loglik <- function(data, params) {
 stage_abundance_loglik <- function(data, params) {
   
   # unpack params
-  n_obs <- params$n_obs
-  classes <- params$classes
   density <- params$density
   mat <- params$matrix
   inits <- params$inits
@@ -170,77 +166,7 @@ binned_age_recapture_loglik <- function(data, params) {
 # internal function: define stage-recapture log-likelihood
 binned_stage_recapture_loglik <- function(data, params) {
   
-  # unpack params
-  survival <- params$survival
-  age_to_stage <- params$age_to_stage_conversion
-  classes <- params$classes
-  bias <- params$bias
-  
-  # calculate first and final observations
-  first_obs <- apply(data$data, 1, function(x) min(which(x > 0)))
-  final_obs <- apply(data$data, 1, function(x) max(which(x > 0)))
-  
-  # pull out first and final ages
-  first_class <- apply(data$data, 1, function(x) x[min(which(x > 0))])
-  final_class <- apply(data$data, 1, function(x) x[max(which(x > 0))])
-  
-  # number of years alive
-  n_alive <- final_obs - first_obs
-  
-  # are any individuals never recaptured?
-  single_obs <- first_obs == final_obs
-  
-  # focus on those with >1 observation
-  n_alive <- n_alive[!single_obs]
-  first_class <- first_class[!single_obs]
-  first_seen <- first_obs[!single_obs]
-  last_seen <- final_obs[!single_obs]
-  
-  # probabiity of stage j given age k (should be n_obs x n_stage)
-  p_stage_first_capture <- age_to_stage[first_class, ]
-  
-  # create Phi = P(surv_n_alive | stage_at_time_1) (n_alive x n_stage)
-  max_alive <- max(n_alive)
-  survival <- cbind(survival,
-                    do.call(cbind, lapply(seq_len(max_alive), function(x) survival[, n_age])))
-  
-  # pre-calculate all possible survival trajectories
-  first_seen_lifespan <- matrix(as.numeric(unlist(strsplit(unique(paste(first_seen, n_alive, sep = '_')), '_'))), ncol = 2, byrow = TRUE)
-  id_match <- match(paste(first_seen, n_alive, sep = '_'), unique(paste(first_seen, n_alive, sep = '_')))
-  idx <- apply(first_seen_lifespan, 1, function(x) x[1]:(x[1] + x[2]))
-  surv_mat <- ones(nrow(first_seen_lifespan), classes)
-  for (i in seq_len(nrow(first_seen_lifespan))) {
-    mat_tmp <- survival[idx[[i]], ]
-    out <- NULL
-    for (j in seq_len(classes)) {
-      out <- c(out, seq(1, length(idx[[i]]) ^ 2, by = (length(idx[[i]]) + 1)) + (j - 1) * length(idx[[i]]))
-    }
-    idy <- rep(seq_len(classes), each = length(idx[[i]]))
-    surv_mat[i, ] <- tapply(mat_tmp[out], idy, "prod")
-  }
-  
-  # what are survival probabilities of each stage at first sight?
-  p_survival_hist_stage <- surv_mat[id_match, ]
-  
-  # calculate P(survival_history | age = k)
-  p_survival_hist_stage <- rowSums(p_survival_hist_stage * p_stage_first_capture)
-  
-  # probs of binary capture history, assume detection is constant
-  binary_capture_history <- apply(data$data, 1, function(x) x[min(which(x > 0)):max(which(x > 0))])
-  binary_capture_history <- ifelse(do.call(c, binary_capture_history) > 0, 1, 0)
-  
-  # probs of final detection (for each age??)
-  # p(never_observed_again | final_size, final_obs) = \Sum_ages p(final_age | final_size) p(not_observed | final_obs, final_age) 
-  # p_final_obs <- SOMETHING
-  # not_detected is independent of age/size
-  # survival depends on year and age
-  # set up recursively (but still needs one entry for each individual)
-  
-  distribution(binary_capture_history) <- binomial(size = 1, p = bias)
-  survival_hist_ones <- ones(length(p_survival_hist_stage))
-  distribution(survival_hist_ones) <- binomial(size = 1, p = p_survival_hist_stage)
-  # final_obs_ones <- ones(length(p_final_obs))
-  # distribution(final_obs_ones) <- binomial(size = 1, p = p_final_obs)
+  NULL
   
 }
 

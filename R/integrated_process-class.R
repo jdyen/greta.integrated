@@ -289,7 +289,7 @@ plot.integrated_process <- function(x, ...) {
     old_mar <- par()$mar
 
     # remove ridiculously wide borders
-    par(mar = c(5, 3, 0.1, 0.1))
+    par(mar = c(5, 3, 0.7, 0.7))
     
     # plot with colours according to col_mat
     image(t(col_mat),
@@ -298,7 +298,7 @@ plot.integrated_process <- function(x, ...) {
           bty = "n")
     
     # add a legend
-    legend(0.5, -0.22, xpd = TRUE,
+    legend(0.5, -0.25, xpd = TRUE,
            fill = col_pal,
            horiz = TRUE,
            border = c("gray70", col_pal[2:3]),
@@ -310,7 +310,7 @@ plot.integrated_process <- function(x, ...) {
     # add some labels
     type <- ifelse(x$type == "leslie", "Age", "Stage")
     mtext(paste0(type, " at time t"), side = 1, adj = 0.5, line = 1, cex = 1.5)
-    mtext(paste0(type, " at time t + 1"), side = 2, adj = 0.5, line = 1, cex = 1.5)
+    mtext(paste0(type, " at time t + 1"), side = 2, adj = 0.5, line = 1.5, cex = 1.5)
     
     # mark low and high ends
     mtext("Low", side = 1, adj = 0.01, line = 0.2, cex = 1)
@@ -339,7 +339,7 @@ plot.integrated_process <- function(x, ...) {
           bty = "n")
     
     # add a legend
-    legend(0.5, -0.22, xpd = TRUE,
+    legend(0.5, -0.25, xpd = TRUE,
            fill = col_pal,
            horiz = TRUE,
            border = c("gray70", col_pal[2:4]),
