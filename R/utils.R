@@ -340,17 +340,18 @@ number_to_word <- function(x) {
 tf <- tensorflow::tf
 op <- greta::.internals$nodes$constructors$op
 
-rescale_array <- function(array, mat_div, mat_mult) {
+rescale_array <- function(array, mat_div, mat_mul) {
   
   op("rescale_array",
-     array, mat_div, mat_mult,
+     array, mat_div, mat_mul,
      tf_operation = "tf_rescale_array",
      dim = dim(array))
   
 } 
 
-tf_rescale_array <- function(array, mat_div, mat_mult) {
+tf_rescale_array <- function(array, mat_div, mat_mul) {
   
-  tf$einsum('aijk,aik,aik>aijk', array, mat_div, mat_mult)
+  mat_div_alt <- tf$div(tf$constant(1.0, dtype = tf$float64), mat_div)
+  tf$einsum("aijk,aik,aik->aijk", array, mat_div_alt, mat_mul)
   
 }
