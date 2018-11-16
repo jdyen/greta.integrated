@@ -132,15 +132,19 @@ integrated_model <- function(...) {
 
   for (i in seq_along(data_modules)) {
   
-    # pull out the parameters we need
-    parameters_tmp <- parameters[[process_id[i]]]
+    # prepare matrix
+    parameters[[process_id[i]]]$matrix <- construct_matrix(data_modules[[i]], parameters[[process_id[i]]])
     
     # we need to add a couple of things from the process module
-    parameters_tmp$density <- process_list[[process_id[i]]]$density
-    parameters_tmp$process_class <- process_list[[process_id[i]]]$type
+    parameters[[process_id[i]]]$density <- process_list[[process_id[i]]]$density
+    parameters[[process_id[i]]]$process_class <- process_list[[process_id[i]]]$type
 
-    # prepare matrix
-    parameters_tmp$matrix <- construct_matrix(data_modules[[i]], parameters_tmp)
+    # make parameters cleaner if predictors are included (ops were kept separate for convenience)
+    if (!is.null(parameters[[process_id[i]]]$n_predictors)) {
+      parameters[[process_id[i]]]$survival <- parameters[[process_id[i]]]$survival$children[[1]]
+      parameters[[process_id[i]]]$transition <- parameters[[process_id[i]]]$transition$children[[1]]
+      parameters[[process_id[i]]]$fecundity <- parameters[[process_id[i]]]$fecundity$children[[1]]
+    }
     
     # choose appropriate likelihood based on type of data
     loglik_fun <- switch(data_modules[[i]]$data_type,
@@ -154,7 +158,7 @@ integrated_model <- function(...) {
                          age_to_stage = age_to_stage_loglik)
     
     # define likelihood (doesn't return anything)
-    loglik_fun(data_modules[[i]], parameters_tmp)
+    loglik_fun(data_modules[[i]], parameters[[process_id[i]]])
     
   } 
   
@@ -180,12 +184,196 @@ print.integrated_model <- function(x, ...) {
   cat(paste0("This is an integrated_model object\n"))
 }
 
-#' @export
 #' @rdname integrated_model
-#' 
-plot.integrated_model <- function(x, ...) {
+#' @param y unused default argument
+#' @param colour base colour used for plotting. Defaults to \code{greta} colours
+#'   in violet.
+#'
+#' @details The plot method produces a visual representation of the defined
+#'   model. It uses the \code{DiagrammeR} package, which must be installed
+#'   first. Here's a key to the plots:
+#'   \if{html}{\figure{plotlegend.png}{options: width="100\%"}}
+#'   \if{latex}{\figure{plotlegend.pdf}{options: width=7cm}}
+#'
+#' @return \code{plot} - a \code{\link[DiagrammeR:grViz]{DiagrammeR::grViz}}
+#'   object, with the
+#'   \code{\link[DiagrammeR:create_graph]{DiagrammeR::dgr_graph}} object used to
+#'   create it as an attribute \code{"dgr_graph"}.
+#'
+#' @export
+plot.integrated_model <- function(x,
+                                  y,
+                                  colour = "#996bc7",
+                                  ...) {
   
-  plot(x$greta_model, ...)
+  if (!requireNamespace("DiagrammeR", quietly = TRUE)) {
+    stop("the DiagrammeR package must be installed to plot greta models",
+         call. = FALSE)
+  }
+  
+  # set up graph
+  dag_mat <- x$dag$adjacency_matrix
+  
+  gr <- DiagrammeR::from_adj_matrix(dag_mat,
+                                    mode = "directed",
+                                    use_diag = FALSE)
+  
+  n_nodes <- nrow(gr$nodes_df)
+  
+  names <- names(x$dag$node_list)
+  types <- x$dag$node_types
+  to <- gr$edges_df$to
+  from <- gr$edges_df$from
+  
+  node_shapes <- rep("square", n_nodes)
+  node_shapes[types == "variable"] <- "circle"
+  node_shapes[types == "distribution"] <- "diamond"
+  node_shapes[types == "operation"] <- "circle"
+  
+  node_edge_colours <- rep(greta_col("lighter", colour), n_nodes)
+  node_edge_colours[types == "distribution"] <- greta_col("light", colour)
+  node_edge_colours[types == "operation"] <- "lightgray"
+  
+  node_colours <- rep(greta_col("super_light", colour), n_nodes)
+  node_colours[types == "distribution"] <- greta_col("lighter", colour)
+  node_colours[types == "operation"] <- "lightgray"
+  node_colours[types == "data"] <- "white"
+  
+  node_size <- rep(1, length(types))
+  node_size[types == "variable"] <- 0.6
+  node_size[types == "data"] <- 0.5
+  node_size[types == "operation"] <- 0.2
+  
+  # get node labels
+  node_labels <- vapply(x$dag$node_list,
+                        member,
+                        "plotting_label()",
+                        FUN.VALUE = "")
+  
+  # add greta array names where available
+  visible_nodes <- lapply(x$visible_greta_arrays, get_node)
+  known_nodes <- vapply(visible_nodes,
+                        member,
+                        "unique_name",
+                        FUN.VALUE = "")
+  known_nodes <- known_nodes[known_nodes %in% names]
+  known_idx <- match(known_nodes, names)
+  node_labels[known_idx] <- paste(names(known_nodes),
+                                  node_labels[known_idx],
+                                  sep = "\n")
+  
+  # for the operation nodes, add the operation to the edges
+  op_idx <- which(types == "operation")
+  op_names <- vapply(x$dag$node_list[op_idx],
+                     member,
+                     "operation_name",
+                     FUN.VALUE = "")
+  op_names <- gsub("`", "", op_names)
+  
+  ops <- rep("", length(types))
+  ops[op_idx] <- op_names
+  
+  # get ops as tf operations
+  edge_labels <- ops[to]
+  
+  # for distributions, put the parameter names on the edges
+  distrib_to <- which(types == "distribution")
+  
+  parameter_list <- lapply(x$dag$node_list[distrib_to],
+                           member,
+                           "parameters")
+  
+  node_names <- lapply(parameter_list,
+                       function(parameters) {
+                         vapply(parameters,
+                                member,
+                                "unique_name",
+                                FUN.VALUE = "")
+                       })
+  
+  # for each distribution
+  for (i in seq_along(node_names)) {
+    
+    from_idx <- match(node_names[[i]], names)
+    to_idx <- match(names(node_names)[i], names)
+    param_names <- names(node_names[[i]])
+    
+    # assign them
+    for (j in seq_along(from_idx)) {
+      idx <- from == from_idx[j] & to == to_idx
+      edge_labels[idx] <- param_names[j]
+    }
+    
+  }
+  
+  edge_style <- rep("solid", length(to))
+  
+  # put dashed line between target and distribution
+  # for distributions, put the parameter names on the edges
+  names <- names(x$dag$node_list)
+  types <- x$dag$node_types
+  distrib_idx <- which(types == "distribution")
+  
+  # find those with targets
+  targets <- lapply(x$dag$node_list[distrib_idx],
+                    member,
+                    "target")
+  
+  keep <- !vapply(targets, is.null, TRUE)
+  distrib_idx <- distrib_idx[keep]
+  
+  
+  target_names <- vapply(x$dag$node_list[distrib_idx],
+                         member,
+                         "target$unique_name",
+                         FUN.VALUE = "")
+  distribution_names <- names(target_names)
+  distribution_idx <- match(distribution_names, names)
+  target_idx <- match(target_names, names)
+  
+  # for each distribution
+  for (i in seq_along(distribution_idx)) {
+    
+    idx <- which(to == target_idx[i] & from == distribution_idx[i])
+    edge_style[idx] <- "dashed"
+    
+  }
+  
+  # node options
+  gr$nodes_df$type <- "lower"
+  gr$nodes_df$fontcolor <- greta_col("dark", colour)
+  gr$nodes_df$fontsize <- 12
+  gr$nodes_df$penwidth <- 2
+  
+  gr$nodes_df$shape <- node_shapes
+  gr$nodes_df$color <- node_edge_colours
+  gr$nodes_df$fillcolor <- node_colours
+  gr$nodes_df$width <- node_size
+  gr$nodes_df$height <- node_size * 0.8
+  gr$nodes_df$label <- node_labels
+  
+  # edge options
+  gr$edges_df$color <- "Gainsboro"
+  gr$edges_df$fontname <- "Helvetica"
+  gr$edges_df$fontcolor <- "gray"
+  gr$edges_df$fontsize <- 11
+  gr$edges_df$penwidth <- 3
+  
+  gr$edges_df$label <- edge_labels
+  gr$edges_df$style <- edge_style
+  
+  # set the layout type
+  gr$global_attrs$value[gr$global_attrs$attr == "layout"] <- "dot"
+  # make it horizontal
+  gr$global_attrs <- rbind(gr$global_attrs,
+                           data.frame(attr = "rankdir",
+                                      value = "LR",
+                                      attr_type = "graph"))
+  
+  
+  grViz <- DiagrammeR::render_graph(gr)
+  attr(grViz, "dgr_graph") <- gr
+  grViz
   
 }
 

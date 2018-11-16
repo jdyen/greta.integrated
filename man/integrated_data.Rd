@@ -9,27 +9,28 @@
 \alias{stage_to_age}
 \alias{age_to_stage}
 \alias{community}
-\alias{predictors}
 \alias{is.integrated_data}
 \alias{print.integrated_data}
 \alias{summary.integrated_data}
 \title{create integrated data objects}
 \usage{
-age_abundance(data, process, bias = no_bias(), settings = list())
+age_abundance(data, process, bias = no_bias(), settings = list(),
+  predictors = NULL)
 
-stage_abundance(data, process, bias = no_bias(), settings = list())
+stage_abundance(data, process, bias = no_bias(), settings = list(),
+  predictors = NULL)
 
-age_recapture(data, process, bias = no_bias(), settings = list())
+age_recapture(data, process, bias = no_bias(), settings = list(),
+  predictors = NULL)
 
-stage_recapture(data, process, bias = no_bias(), settings = list())
+stage_recapture(data, process, bias = no_bias(), settings = list(),
+  predictors = NULL)
 
 stage_to_age(x, ...)
 
 age_to_stage(x, ...)
 
 community(data, process, bias = no_bias(), settings = list())
-
-predictors(data, process, bias = no_bias(), settings = list())
 
 is.integrated_data(object)
 

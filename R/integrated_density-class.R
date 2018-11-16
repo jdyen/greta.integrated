@@ -19,6 +19,7 @@
 #'    and \link[greta.integrated]{integrated_process} object
 #' 
 #' @import greta
+#' @import tensorflow
 #' 
 #' @examples
 #' \dontrun{
@@ -60,7 +61,7 @@ beverton <- function(parameters = uniform(0, 1)) {
   
   # specify functional form
   form <- function(x, params) {
-    1.0 / (1.0 + x * params)
+    tf$ones(1, dtype = x$dtype) / (tf$ones(1, dtype = x$dtype) + x * params)
   }
   
   # collate and return outputs  
@@ -77,15 +78,13 @@ beverton <- function(parameters = uniform(0, 1)) {
 #' 
 element_wise <- function(parameters = uniform(0, 1), masks = list()) {
   
-  ### WHAT IS EVEN REASONABLE FOR THIS SORT OF SETUP?
-  
   # setup masking matrices
   mask_list <- list()
   mask_list[names(masks)] <- masks
   
   # specify functional form
   form <- function(x, params) {
-    1.0 / (1.0 + x * params)
+    tf$ones(1, dtype = x$dtype) / (tf$ones(1, dtype = x$dtype) + x * params)
   }
   
   # collate and return outputs  

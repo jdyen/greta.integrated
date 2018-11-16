@@ -14,7 +14,7 @@ is.integrated_model(object)
 
 \method{print}{integrated_model}(x, ...)
 
-\method{plot}{integrated_model}(x, ...)
+\method{plot}{integrated_model}(x, y, colour = "#996bc7", ...)
 
 \method{summary}{integrated_model}(object, ...)
 }
@@ -25,11 +25,21 @@ is.integrated_model(object)
 
 \item{x}{an \code{integrated_model} object}
 
+\item{y}{unused default argument}
+
+\item{colour}{base colour used for plotting. Defaults to \code{greta} colours
+in violet.}
+
 \item{process}{an \link[greta.integrated]{integrated_process} object}
 }
 \value{
 A named list of \code{greta_array} objects, which can be passed to
    \link[greta]{model}. This list has associated `print`, `plot`, and `summary` methods.
+
+\code{plot} - a \code{\link[DiagrammeR:grViz]{DiagrammeR::grViz}}
+  object, with the
+  \code{\link[DiagrammeR:create_graph]{DiagrammeR::dgr_graph}} object used to
+  create it as an attribute \code{"dgr_graph"}.
 }
 \description{
 An \code{integrated_model} object combines multiple \link[greta.integrated]{integrated_data}
@@ -39,6 +49,12 @@ An \code{integrated_model} object combines multiple \link[greta.integrated]{inte
 }
 \details{
 something
+
+The plot method produces a visual representation of the defined
+  model. It uses the \code{DiagrammeR} package, which must be installed
+  first. Here's a key to the plots:
+  \if{html}{\figure{plotlegend.png}{options: width="100\%"}}
+  \if{latex}{\figure{plotlegend.pdf}{options: width=7cm}}
 }
 \examples{
 \dontrun{

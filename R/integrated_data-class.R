@@ -126,11 +126,25 @@ age_abundance <- function(data, process, bias = no_bias(), settings = list(), pr
     
   }
   
+  # are predictors provided?
   if (!is.null(predictors)) {
+    
+    # clean and tidy the predictors
     predictors <- prepare_predictors(predictors)
-    warning("you need to check if predictors align with data_clean", call. = FALSE)
+    
+    # check that dims match up
+    if (ncol(data_clean) != length(predictors$removed))
+      stop("there are more rows in predictors than columns in abundance data; this is not correct", call. = FALSE)
+    
+    # remove cols from abundance data if removed from predictors
+    if (any(predictors$removed))
+      data_clean <- data_clean[, predictors$removed]
+    
+    # clean up predictors so it matches expected output
+    predictors <- predictors$predictors
+    
   }
-
+  
   # want to tie everything together in a single output
   data_module <- list(data = data_clean,
                       process = process, 
@@ -230,9 +244,23 @@ stage_abundance <- function(data, process, bias = no_bias(), settings = list(), 
     
   }
   
+  # are predictors provided?
   if (!is.null(predictors)) {
+    
+    # clean and tidy the predictors
     predictors <- prepare_predictors(predictors)
-    warning("you need to check if predictors align with data_clean", call. = FALSE)
+    
+    # check that dims match up
+    if (ncol(data_clean) != length(predictors$removed))
+      stop("there are more rows in predictors than columns in abundance data; this is not correct", call. = FALSE)
+    
+    # remove cols from abundance data if removed from predictors
+    if (any(predictors$removed))
+      data_clean <- data_clean[, predictors$removed]
+    
+    # clean up predictors so it matches expected output
+    predictors <- predictors$predictors
+    
   }
 
   # want to tie everything together in a single output
@@ -760,9 +788,10 @@ prepare_predictors <- function(data) {
   }
 
   # return outputs
-  data_clean
+  list(predictors = data_clean,
+       removed = na_row_check)
   
-} 
+}
 
 #' @export
 #' @rdname integrated_data

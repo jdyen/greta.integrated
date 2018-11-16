@@ -94,9 +94,9 @@ construct_matrix <- function(data, parameters) {
       stop("transformed prior for noise has multiple inputs, which will not work in a model that includes predictors", call. = FALSE)
     
     # setup linear predictors
-    surv_link <- predictors$data %*% surv$children[[1]] + surv_noise$children[[1]]
-    tran_link <- predictors$data %*% tran$children[[1]] + tran_noise$children[[1]]
-    fec_link <- predictors$data %*% fec$children[[1]] + fec_noise$children[[1]]
+    surv_link <- data$predictors %*% surv$children[[1]] + surv_noise$children[[1]]
+    tran_link <- data$predictors %*% tran$children[[1]] + tran_noise$children[[1]]
+    fec_link <- data$predictors %*% fec$children[[1]] + fec_noise$children[[1]]
     
     # recombine link nodes with correct transformations
     if (length(surv$op_args)) {
@@ -124,6 +124,7 @@ construct_matrix <- function(data, parameters) {
     mat1[idy] <- transition_all
     
     # need to standardise survival and transition matrices
+    warning("internal warning: einsum sweep approximation is not working correctly")
     mat1_sums <- apply(mat1, c(1, 3), "sum")
     mat1 <- rescale_array(mat1, mat1_sums, survival_all)
     

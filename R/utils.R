@@ -264,7 +264,21 @@ extract_bounds <- function(x) {
   
   x_node <- get_node(x)
   
-  c(lower = x_node$lower, upper = x_node$upper)
+  if (!is.null(x_node$distribution)) {
+    bounds <- c(lower = x_node$lower, upper = x_node$upper)
+  } else {
+    if (!("operation_node" %in% class(x_node))) {
+      bounds <- c(-Inf, Inf)
+    } else {
+      bounds <- c(lower = x_node$children[[1]]$lower, upper = x_node$children[[1]]$upper)
+      if (x_node$operation_name %in% c("ilogit", "iprobit", "icloglog", "icauchit"))
+        bounds <- c(0, 1)
+      if (x_node$operation_name %in% c("log1pe", "exp"))
+        bounds <- c(0, Inf)
+    }
+  }
+  
+  bounds
   
 }
 

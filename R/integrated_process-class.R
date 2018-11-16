@@ -267,6 +267,9 @@ summary.integrated_process <- function(object, ...) {
 #' 
 plot.integrated_process <- function(x, ...) {
   
+  ### REDO with DiagrammeR to create a stage-transition diagram
+  
+  
   # what are we working with?
   tran <- x$masks$transition
   fec <- x$masks$fecundity
