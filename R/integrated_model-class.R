@@ -55,14 +55,14 @@ integrated_model <- function(...) {
   # are all of these implemented?
   implemented <- c("age_abundance", "stage_abundance", "age_recapture",
                    "stage_recapture", "stage_to_age", "age_to_stage",
-                   "predictors")
+                   "predictor")
   if (!all(data_types %in% implemented)) {
     problem_types <- data_types[!(data_types %in% implemented)]
     stop(paste0("one or more data types are not currently implemented (", paste(problem_types, collapse = ", "), ")"), call. = FALSE)
   }
   
   # are any data modules predictors? Deal with this second (expand process)
-  is_predictor <- data_types == "predictors"
+  is_predictor <- data_types == "predictor"
   any_predictors <- any(is_predictor)
   
   # how many different process models are we dealing with?
@@ -106,7 +106,7 @@ integrated_model <- function(...) {
     if (includes_predictors) {
       
       # pull out the predictor data set (can't be more than one per process)
-      predictors <- data_module[[which(process_id == i & is_predictor)]]
+      predictors <- data_modules[[which(process_id == i & is_predictor)]]
       
       # pull together a set of parameters based on the details of this process
       parameters[[i]] <- define_parameters(classes = process_list[[i]]$classes,

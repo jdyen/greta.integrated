@@ -5,8 +5,8 @@ define_parameters <- function(classes, priors, masks, process_type, predictors =
   if (!is.null(predictors)) {
     
     # what do the predictors look like?
-    n_obs <- nrow(predictors)
-    n_pred <- ncol(predictors)
+    n_obs <- nrow(predictors$data)
+    n_pred <- ncol(predictors$data)
 
     # what dims do we need to get to?
     survival_dims <- c(n_pred, classes)
@@ -34,10 +34,20 @@ define_parameters <- function(classes, priors, masks, process_type, predictors =
     # setup initial conditions
     inits <- change_dims(priors$initials, c(classes, 1L))
     
+    # check that extracted distribs are formed from a single input
+    if (length(survival$children) > 1)
+      stop("prior for survival has multiple inputs, which will not work in a model that includes predictors", call. = FALSE)
+    if (length(transition$children) > 1)
+      stop("prior for survival has multiple inputs, which will not work in a model that includes predictors", call. = FALSE)
+    if (length(fecundity$children) > 1)
+      stop("prior for survival has multiple inputs, which will not work in a model that includes predictors", call. = FALSE)
+    if (length(survival_noise$children) > 1)
+      stop("prior for noise has multiple inputs, which will not work in a model that includes predictors", call. = FALSE)
+    
     # setup linear predictors
-    survival_link <- predictors %*% survival + survival_noise
-    transition_link <- predictors %*% transition + transition_noise
-    fecundity_link <- predictors %*% fecundity + fecundity_noise
+    survival_link <- predictors$data %*% survival$children[[1]] + survival_noise$children[[1]]
+    transition_link <- predictors$data %*% transition$children[[1]] + transition_noise$children[[1]]
+    fecundity_link <- predictors$data %*% fecundity$children[[1]] + fecundity_noise$children[[1]]
 
     # recombine link nodes with correct transformations
     if (length(survival$op_args)) {
@@ -57,7 +67,7 @@ define_parameters <- function(classes, priors, masks, process_type, predictors =
     }
 
     # construct population matrix
-    mat1 <- mat2 <- zeros(classes, classes)
+    mat1 <- mat2 <- zeros(n_obs, classes, classes)
 
     # vectorise matrix fill: transition
     idx <- which(masks$transition == 1) - 1
@@ -65,8 +75,8 @@ define_parameters <- function(classes, priors, masks, process_type, predictors =
     mat1[idy] <- transition_all
 
     # need to standardise survival and transition matrices
-    mat1 <- sweep(mat1, c(1, 3), apply(mat1, c(1, 3), "sum"), "/")
-    mat1 <- sweep(mat1, c(1, 3), survival_all, "*")
+    mat1_sums <- apply(mat1, c(1, 3), "sum")
+    mat1 <- rescale_array(mat1, mat1_sums, survival_all)
 
     # vectorise matrix fill: fecundity
     idx <- which(masks$fecundity == 1) - 1

@@ -268,21 +268,19 @@ summary.integrated_process <- function(object, ...) {
 plot.integrated_process <- function(x, ...) {
   
   # what are we working with?
-  surv <- x$masks$survival
   tran <- x$masks$transition
   fec <- x$masks$fecundity
 
   # do any overlap?
-  all <- surv + tran + fec
+  all <- tran + fec
   overlap <- any(all > 1)
   
   # define a matrix of colours
-  col_mat <- ifelse(surv, 1, 0)
-  col_mat <- ifelse(tran, 2, col_mat)
-  col_mat <- ifelse(fec, 3, col_mat)
+  col_mat <- ifelse(tran, 1, 0)
+  col_mat <- ifelse(fec, 2, col_mat)
   
   # set a colour palette
-  col_pal <- c("gray95", "#57A0D3", "#1D2951", "#0E4D92", "#EF820D", "#BE5504", "#FDA50F", "#0b6623")
+  col_pal <- c("gray95", "#57A0D3", "#1D2951", "#0E4D92")
   
   # easy if they don't overlap
   if (!overlap) {
@@ -295,7 +293,7 @@ plot.integrated_process <- function(x, ...) {
     
     # plot with colours according to col_mat
     image(t(col_mat),
-          col = col_pal[1:4],
+          col = col_pal[1:3],
           xaxt = "n", yaxt = "n",
           bty = "n")
     
@@ -303,11 +301,11 @@ plot.integrated_process <- function(x, ...) {
     legend(0.5, -0.22, xpd = TRUE,
            fill = col_pal,
            horiz = TRUE,
-           border = c("gray70", col_pal[2:4]),
+           border = c("gray70", col_pal[2:3]),
            bty = "n",
            cex = 1.25,
            xjust = 0.5,
-           legend = c("none", "survival", "transition", "fecundity"))
+           legend = c("none", "transition", "fecundity"))
     
     # add some labels
     type <- ifelse(x$type == "leslie", "Age", "Stage")
@@ -326,11 +324,8 @@ plot.integrated_process <- function(x, ...) {
   } else {
     
     # add some new colours if they overlap
-    col_mat[surv + tran == 2] <- 4
-    col_mat[surv + fec == 2] <- 5
-    col_mat[tran + fec == 2] <- 6
-    col_mat[all == 3] <- 7
-    
+    col_mat[tran + fec == 2] <- 3
+
     # pull out old settings to restore
     old_mar <- par()$mar
     
@@ -347,13 +342,11 @@ plot.integrated_process <- function(x, ...) {
     legend(0.5, -0.22, xpd = TRUE,
            fill = col_pal,
            horiz = TRUE,
-           border = c("gray70", col_pal[2:8]),
+           border = c("gray70", col_pal[2:4]),
            bty = "n",
            cex = 1,
            xjust = 0.5,
-           legend = c("none", "surv", "trans", "fec",
-                      "su/tr", "su/fe", "tr/fe",
-                      "all"))
+           legend = c("none", "transition", "fecundity", "both"))
     
     # add some labels
     type <- ifelse(x$type == "leslie", "Age", "Stage")
@@ -370,9 +363,7 @@ plot.integrated_process <- function(x, ...) {
     par(mar = old_mar)
     
   }
-  
-  NULL
-  
+
 }
 
 # internal function: create integrated_process object

@@ -101,5 +101,3 @@ initialise_internal <- function(x) {
   out
   
 }
-
-integrated_summary <- NULL

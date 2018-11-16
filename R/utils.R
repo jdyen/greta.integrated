@@ -335,3 +335,22 @@ number_to_word <- function(x) {
   x
   
 }
+
+# tensorflow einsum to replicate 3D sweep
+tf <- tensorflow::tf
+op <- greta::.internals$nodes$constructors$op
+
+rescale_array <- function(array, mat_div, mat_mult) {
+  
+  op("rescale_array",
+     array, mat_div, mat_mult,
+     tf_operation = "tf_rescale_array",
+     dim = dim(array))
+  
+} 
+
+tf_rescale_array <- function(array, mat_div, mat_mult) {
+  
+  tf$einsum('aijk,aik,aik>aijk', array, mat_div, mat_mult)
+  
+}
