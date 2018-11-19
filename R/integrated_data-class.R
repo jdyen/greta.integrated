@@ -6,8 +6,10 @@
 #' 
 #' @param data a single data input (see details for descriptions of possible input types)
 #' @param process an \link[greta.integrated]{integrated_process} object
+#' @param likelihood something
 #' @param bias a bias function that connects observed and modelled data (see details)
 #' @param settings a named list of settings passed to data formatting functions (see details)
+#' @param predictors
 #' @param ... additional arguments to \link[base]{print} and \link[base]{summary} methods (currently ignored)
 #' @param x an \code{integrated_data} object
 #' @param object an \code{integrated_data} object
@@ -42,8 +44,171 @@
 #' @export
 #' @rdname integrated_data
 #' 
-age_abundance <- function(data, process, bias = no_bias(), settings = list(), predictors = NULL) {
+add_data <- function(data, process, likelihood, bias = no_bias(), settings = list(), predictors = NULL) {
+  
+  # compile data for the chosen likelihood
+  data <- do.call(paste0(likelihood$type, "_internal"), list(data, process, settings))
 
+  # are predictors provided?
+  if (!is.null(predictors)) {
+    
+    if (!("integrated_predictor" %in% class(predictors)))
+      stop("predictors must be created with the `add_predictors()` function", call. = FALSE)
+    
+    # check that dims match and remove observations from data if any predictors are removed
+    data <- match_dims(data, predictors)
+  
+  }
+  
+  # want to tie everything together in a single output
+  data_module <- list(data = data$data,
+                      process = process, 
+                      likelihood = likelihood,
+                      bias = bias,
+                      classes = data$classes,
+                      predictors = predictors)
+  
+  # return outputs with class definition
+  as.integrated_data(data_module)
+  
+}
+
+#' @export
+#' @rdname integrated_data
+#' 
+age_abundance <- function(distribution = poisson) {
+  
+  list(type = "age_abundance",
+       distribution = distribution)
+
+}
+
+#' @export
+#' @rdname integrated_data
+#' 
+stage_abundance <- function(distribution = poisson) {
+  
+  list(type = "stage_abundance",
+       distribution = distribution)
+  
+}
+
+#' @export
+#' @rdname integrated_data
+#' 
+age_cjs <- function(distribution = binomial) {
+
+  if (!identical(binomial, distribution))
+    warning("a binomial distribution will be used for cjs model", call. = FALSE)
+    
+  distribution <- binomial
+  
+  list(type = "age_cjs",
+       distribution = distribution)
+  
+}
+
+#' @export
+#' @rdname integrated_data
+#' 
+stage_cjs <- function(distribution = binomial) {
+  
+  if (!identical(binomial, distribution))
+    warning("a binomial distribution will be used for cjs model", call. = FALSE)
+  
+  distribution <- binomial
+  
+  list(type = "stage_cjs",
+       distribution = distribution)
+  
+}
+
+#' @export
+#' @rdname integrated_data
+#' 
+stage_to_age <- function(distribution = multinomial) {
+  
+  if (!identical(multinomial, distribution))
+    warning("a multinomial distribution will be used for stage-to-age model", call. = FALSE)
+  
+  list(type = "stage_to_age",
+       distribution = distribution)
+  
+}
+
+#' @export
+#' @rdname integrated_data
+#' 
+age_to_stage <- function(distribution = multinomial) {
+  
+  if (!identical(multinomial, distribution))
+    warning("a multinomial distribution will be used for age-to-stage model", call. = FALSE)
+  
+  list(type = "age_to_stage",
+       distribution = distribution)
+  
+}
+
+#' @export
+#' @rdname integrated_data
+#' 
+occupancy <- function(distribution = bernoulli) {
+  
+  stop("occupancy data are not supported (yet)", call. = FALSE)
+  
+  list(type = "population_occupancy",
+       distribution = distribution)
+  
+}
+
+#' @export
+#' @rdname integrated_data
+#' 
+abundance <- function(distribution = poisson) {
+  
+  stop("population abundance data are not supported (yet)", call. = FALSE)
+  
+  list(type = "population_abundance",
+       distribution = distribution)
+  
+}
+
+#' @export
+#' @rdname integrated_data
+#' 
+community <- function(distribution = bernoulli) {
+  
+  stop("community data are not supported (yet)", call. = FALSE)
+
+  list(type = "community",
+       distribution = distribution)
+
+}
+
+#' @export
+#' @rdname integrated_data
+#' 
+is.integrated_data <- function(object) {
+  inherits(object, "integrated_data")
+}
+
+#' @export
+#' @rdname integrated_data
+#' 
+print.integrated_data <- function(x, ...) {
+  cat(paste0("This is an integrated_data object\n"))
+}
+
+#' @export
+#' @rdname integrated_data
+#' 
+summary.integrated_data <- function(object, ...) {
+  NULL
+}
+
+# internal function: compile age-abundance data
+age_abundance_internal <- function(data, process, settings) {
+  
   # need to unpack the settings
   all_settings <- list(breaks = NULL,
                        likelihood = poisson)
@@ -53,10 +218,7 @@ age_abundance <- function(data, process, bias = no_bias(), settings = list(), pr
   process_class <- ifelse(process$type == "leslie", "age", "stage")
   
   # how many classes are there in the process?
-  classes <- process$classes
-  
-  # placeholder to catch data dim mismatches
-  classes_alt <- NULL
+  classes <- c(process$classes, NA)
   
   # what format do the data take?
   is_matrix_like <- is.data.frame(data) | is.matrix(data)
@@ -65,21 +227,21 @@ age_abundance <- function(data, process, bias = no_bias(), settings = list(), pr
   
   if (not_ok)
     stop("age_abundance data must be a matrix, data.frame, or list", call. = FALSE) 
-
+  
   # need to treat matrix-like data and list data differently
   if (is_matrix_like) {
-
+    
     # default: return data as is if there's a column for each class
     data_clean <- data
     
     # is this a model with age data but a stage structure?
     if (process_class == "stage") {
       warning("it looks like you're fitting a stage-structured model to age data; is this correct?", call. = FALSE)
-      classes_alt <- nrow(data_clean)
+      classes[2] <- nrow(data_clean)
     }
-
+    
     # what if there is not one column per class?
-    if (nrow(data) != process$classes & process_class != "stage") {
+    if (nrow(data) != classes[1] & process_class != "stage") {
       
       # edge case: data are total abundances through time; need to use a different function
       if (nrow(data) == 1)
@@ -88,8 +250,8 @@ age_abundance <- function(data, process, bias = no_bias(), settings = list(), pr
         stop("data only have one column; are you providing total abundance data? If so, try the `abundance()` function", call. = FALSE)
       
       # there must be something wrong
-      stop(paste0("data should have one row per age class but have ", nrow(data), " rows and there are ", process$classes, " age classes"), call. = FALSE)
-
+      stop(paste0("data should have one row per age class but have ", nrow(data), " rows and there are ", classes[1], " age classes"), call. = FALSE)
+      
     }
     
   }
@@ -100,18 +262,18 @@ age_abundance <- function(data, process, bias = no_bias(), settings = list(), pr
     list_len <- sapply(data, length)
     
     # if they're all the same, might be binned data provided as a list rather than matrix-like
-    if (all(list_len == classes)) {
+    if (all(list_len == classes[1])) {
       
       data_clean <- do.call(cbind, data)
       
     } else {  # elements differ in length, probably have individual ages
       
       # cannot handle ages older than number of classes
-      if (max(data) > process$classes) {
-        warning(paste0("some individuals are older than the total number of classes; ages will be truncated to a maximum of ", process$classes), call. = FALSE)
-        data <- ifelse(data > process$classes, process$classes, data)
+      if (max(data) > classes[1]) {
+        warning(paste0("some individuals are older than the total number of classes; ages will be truncated to a maximum of ", classes[1]), call. = FALSE)
+        data <- ifelse(data > process$classes, classes[1], data)
       }
-
+      
       # if so, we need breaks to bin the data        
       if (is.null(all_settings$breaks))
         stop("breaks must be provided if data are not binned", call. = FALSE)
@@ -126,44 +288,13 @@ age_abundance <- function(data, process, bias = no_bias(), settings = list(), pr
     
   }
   
-  # are predictors provided?
-  if (!is.null(predictors)) {
-    
-    # clean and tidy the predictors
-    predictors <- prepare_predictors(predictors)
-    
-    # check that dims match up
-    if (ncol(data_clean) != length(predictors$removed))
-      stop("there are more rows in predictors than columns in abundance data; this is not correct", call. = FALSE)
-    
-    # remove cols from abundance data if removed from predictors
-    if (any(predictors$removed))
-      data_clean <- data_clean[, predictors$removed]
-    
-    # clean up predictors so it matches expected output
-    predictors <- predictors$predictors
-    
-  }
-  
-  # want to tie everything together in a single output
-  data_module <- list(data = data_clean,
-                      process = process, 
-                      bias = bias,
-                      data_type = "age_abundance",
-                      likelihood = all_settings$likelihood,
-                      classes = classes,
-                      classes_alt = classes_alt,
-                      predictors = predictors)
-  
-  # return outputs with class definition
-  as.integrated_data(data_module)
+  # return outputs
+  list(data = data_clean, classes = classes)
   
 }
 
-#' @export
-#' @rdname integrated_data
-#' 
-stage_abundance <- function(data, process, bias = no_bias(), settings = list(), predictors = NULL) {
+# internal function: compile stage-abundance data
+stage_abundance_internal <- function(data, process, settings) {
   
   # need to unpack the settings
   all_settings <- list(breaks = NULL,
@@ -174,10 +305,7 @@ stage_abundance <- function(data, process, bias = no_bias(), settings = list(), 
   process_class <- ifelse(process$type == "leslie", "age", "stage")
   
   # how many classes are there in the process?
-  classes <- process$classes
-  
-  # placeholder to catch data dim mismatches
-  classes_alt <- NULL
+  classes <- c(process$classes, NA)
   
   # what format do the data take?
   is_matrix_like <- is.data.frame(data) | is.matrix(data)
@@ -196,11 +324,11 @@ stage_abundance <- function(data, process, bias = no_bias(), settings = list(), 
     # is this a model with age data but a stage structure?
     if (process_class == "age") {
       warning("it looks like you're fitting an age-structured model to stage data; is this correct?", call. = FALSE)
-      classes_alt <- nrow(data_clean)
+      classes[2] <- nrow(data_clean)
     }
     
     # potentially reformat data if there is not one column per class
-    if (nrow(data) != process$classes & process_class != "age") {
+    if (nrow(data) != classes[1] & process_class != "age") {
       
       # edge case: data are total abundances through time; need to use a different function
       if (nrow(data) == 1)
@@ -208,7 +336,7 @@ stage_abundance <- function(data, process, bias = no_bias(), settings = list(), 
       if (ncol(data) == 1)
         stop("data only have one column; are you providing total abundance data? If so, try the `abundance()` function", call. = FALSE)
       
-      stop(paste0("data should have one row per stage but have ", nrow(data), " rows and there are ", process$classes, " stages"), call. = FALSE)
+      stop(paste0("data should have one row per stage but have ", nrow(data), " rows and there are ", classes[1], " stages"), call. = FALSE)
       
     }
     
@@ -220,16 +348,16 @@ stage_abundance <- function(data, process, bias = no_bias(), settings = list(), 
     list_len <- sapply(data, length)
     
     # if they're all the same, might be binned data provided as a list rather than matrix-like
-    if (all(list_len == classes)) {
+    if (all(list_len == classes[1])) {
       
       data_clean <- do.call(cbind, data)
       
     } else {  # elements differ in length, probably have individual ages
       
       # cannot handle ages older than number of classes
-      if (max(data) > process$classes)
-        stop(paste0("there are ", max(data), " stages and ", process$classes, " classes; the number of stages should not exceed the number of classes"), call. = FALSE)
-
+      if (max(data) > classes[1])
+        stop(paste0("there are ", max(data), " stages and ", classes[1], " classes; the number of stages should not exceed the number of classes"), call. = FALSE)
+      
       # if ok, we need breaks to bin the data        
       if (is.null(all_settings$breaks))
         stop("breaks must be provided if data are not binned", call. = FALSE)
@@ -244,70 +372,38 @@ stage_abundance <- function(data, process, bias = no_bias(), settings = list(), 
     
   }
   
-  # are predictors provided?
-  if (!is.null(predictors)) {
-    
-    # clean and tidy the predictors
-    predictors <- prepare_predictors(predictors)
-    
-    # check that dims match up
-    if (ncol(data_clean) != length(predictors$removed))
-      stop("there are more rows in predictors than columns in abundance data; this is not correct", call. = FALSE)
-    
-    # remove cols from abundance data if removed from predictors
-    if (any(predictors$removed))
-      data_clean <- data_clean[, predictors$removed]
-    
-    # clean up predictors so it matches expected output
-    predictors <- predictors$predictors
-    
-  }
-
-  # want to tie everything together in a single output
-  data_module <- list(data = data_clean,
-                      process = process, 
-                      bias = bias,
-                      data_type = "stage_abundance",
-                      likelihood = all_settings$likelihood,
-                      classes = classes,
-                      classes_alt = classes_alt,
-                      predictors = predictors)
-  
-  # return outputs with class definition
-  as.integrated_data(data_module)
+  # return outputs
+  list(data = data_clean, classes = classes)
   
 }
 
-#' @export
-#' @rdname integrated_data
-#' 
-age_recapture <- function(data, process, bias = no_bias(), settings = list(), predictors = NULL) {
+# internal function: compile age-cjs data
+age_cjs_internal <- function(data, process, settings) {
   
   # need to unpack the settings
-  all_settings <- list(likelihood = multinomial)
+  all_settings <- list()
   all_settings[names(settings)] <- settings
-  
-  # warn that predictors are currently ignored for mark-recapture data
-  if (!is.null(predictors))
-    warning("predictors are not supported (yet) for age_recapture data; provided predictors will be ignored", call. = FALSE)
   
   # is the process model a stage or age based model?
   class_type <- ifelse(process$type == "leslie", "age", "stage")
   
   # what format do the data take?
   is_matrix_like <- is.data.frame(data) | is.matrix(data)
-
+  
   # can only handle matrix-like data types
   if (!is_matrix_like)
     stop("age_recapture data must be a matrix or data.frame containing capture histories", call. = FALSE) 
   
+  # calculate number of classes
+  classes <- c(process$classes, NA)
+  
   # do the entries look like binned or binary data?
   is_binary <- all(unique(data) %in% c(0, 1))
-  is_binned <- all(unique(data) %in% seq_len(process$classes))
+  is_binned <- all(unique(data) %in% seq_len(classes[1]))
   
   # if data are not binned we need to bin them
   if (!is_binary & !is_binned)
-    stop(paste0("range of data does not match the number of classes (", process$classes, ")"), call. = FALSE)
+    stop(paste0("range of data does not match the number of classes (", classes[1], ")"), call. = FALSE)
   
   # can only do so much with binary data
   if (is_binary) {
@@ -358,26 +454,16 @@ age_recapture <- function(data, process, bias = no_bias(), settings = list(), pr
     
   }
   
-  # want to tie everything together in a single output
-  data_module <- list(data = data_clean,
-                      process = process, 
-                      bias = bias,
-                      data_type = data_type,
-                      likelihood = all_settings$likelihood)
-  
-  # return outputs with class definition
-  as.integrated_data(data_module)
-  
+  # return outputs
+  list(data = data_clean, classes = classes)
+
 } 
 
-#' @export
-#' @rdname integrated_data
-#' 
-stage_recapture <- function(data, process, bias = no_bias(), settings = list(), predictors = NULL) {
+# internal function: compile stage-cjs data
+stage_cjs_internal <- function(data, process, settings) {
   
   # need to unpack the settings
-  all_settings <- list(breaks = NULL,
-                       likelihood = multinomial)
+  all_settings <- list(breaks = NULL)
   all_settings[names(settings)] <- settings
   
   # warn that predictors are currently ignored for mark-recapture data
@@ -394,9 +480,12 @@ stage_recapture <- function(data, process, bias = no_bias(), settings = list(), 
   if (!is_matrix_like)
     stop("stage_recapture data must be a matrix or data.frame containing capture histories", call. = FALSE) 
   
+  # calculate classes
+  classes <- c(process$classes, NA)
+  
   # do the entries look like binned or binary data?
   is_binary <- all(unique(data) %in% c(0, 1))
-  is_binned <- all(unique(data) %in% seq_len(process$classes))
+  is_binned <- all(unique(data) %in% seq_len(classes[1]))
   
   # if data are not binned we need to bin them
   if (!is_binary & !is_binned) {
@@ -404,7 +493,7 @@ stage_recapture <- function(data, process, bias = no_bias(), settings = list(), 
     # this will not work if we do not have breaks
     if (is.null(all_settings$breaks))
       stop("data do not appear to be binned or binary; attempted to bin data but breaks were not provided", call. = FALSE)
-
+    
     # warn that this is not a great way to set up data
     warning("data do not appear to be binned or binary; data will be binned according to settings$breaks", call. = FALSE)
     
@@ -470,43 +559,54 @@ stage_recapture <- function(data, process, bias = no_bias(), settings = list(), 
     warning(paste0(sum(class_errors), " individuals regressed by two or more classes, is this reasonable?"), call. = FALSE)
     
   }
-  
-  # want to tie everything together in a single output
-  data_module <- list(data = data_clean,
-                      process = process, 
-                      bias = bias,
-                      data_type = data_type,
-                      likelihood = all_settings$likelihood)
-  
-  # return outputs with class definition
-  as.integrated_data(data_module)
+
+  # return outputs
+  list(data = data_clean, classes = classes)
   
 } 
 
-#' @export
-#' @rdname integrated_data
-#' 
-stage_to_age <- function(x, ...) {
-  UseMethod("stage_to_age")
+# internal function: compile stage-to-age data
+stage_to_age_internal <- function(data, process, settings) {
+  
+  # are data matrix_like?
+  is_matrix_like <- is.data.frame(data) | is.matrix(data)
+  
+  # can only handle matrix-like data types
+  if (!is_matrix_like)
+    stop("stage_to_age data must be a matrix or data.frame containing individual stages and ages or counts of stages and ages", call. = FALSE) 
+  
+  # send out to a function suited to the data type
+  if (ncol(data) != nrow(data)) {
+    out <- stage_to_age_internal_vectors
+  } else {
+    out <- stage_to_age_internal_array
+  }
+  
+  # return outputs
+  list(data = out$data_clean, classes = out$classes)
+  
 }
 
-#' @export
-#' @method stage_to_age formula
-stage_to_age.formula <- function(x, data, process, bias = no_bias(), settings = list()) {
+# internal function: compile stage-to-age data from vectors
+stage_to_age_internal_vectors <- function(data, process, settings) {
   
   # this will not work if we have not got a Leslie matrix process
   if (process$type != "leslie")
     stop("trying to model ages from stage data without an age-based model; this seems like a bad idea", call. = FALSE)
   
   # need to unpack the settings
-  all_settings <- list(breaks = NULL,
-                       likelihood = multinomial)
+  all_settings <- list(breaks = NULL)
   all_settings[names(settings)] <- settings
   
   # parse formula to give outputs
-  var_names <- all.vars(x)
-  response <- get(var_names[1], data)
-  predictor <- get(var_names[2], data)
+  data_classes <- apply(data, 2, max)
+  response <- data[, 1]
+  predictor <- data[, 2]
+
+  # check number of classes
+  classes <- c(process$classes, data_classes[1])
+  if (classes[1] < data_classes[2])
+    stop(paste0("there are more age classes in the data than there are in the process model; consider specifying a new process model with ", data_classes[2], " age classes"), call. = FALSE)
   
   # basic checks to see if we have missed something
   if (length(response) != length(predictor))
@@ -534,55 +634,39 @@ stage_to_age.formula <- function(x, data, process, bias = no_bias(), settings = 
   ones_vec <- rep(1, length(response))
   
   # need to truncate ages if they exceed the number of available classes
-  predictor <- ifelse(predictor >= process$classes, process_classes, predictor)
+  predictor <- ifelse(predictor >= classes[1], classes[1], predictor)
   
   # need to turn vectors into a transition matrix
-  n_bin <- max(response)
-  data_clean <- matrix(0, nrow = n_bin, ncol = process$classes)
-  for (i in seq_len(n_bin)) {
+  data_clean <- matrix(0, nrow = classes[2], ncol = classes[1])
+  for (i in seq_len(classes[2])) {
     predictor_sub <- predictor[response == i]
     classification <- tapply(ones_vec, predictor_sub, sum)
-    data_clean[i, match(names(classification), seq_len(process$classes))] <- classification
+    data_clean[i, match(names(classification), seq_len(classes[1]))] <- classification
   }
   
-  # want to tie everything together in a single output
-  data_module <- list(data = data_clean,
-                      process = process, 
-                      bias = bias,
-                      data_type = "stage_to_age",
-                      likelihood = all_settings$likelihood,
-                      classes = ncol(data_clean),
-                      classes_alt = n_bin)
-  
-  
-  # return outputs with class definition
-  as.integrated_data(data_module)
-  
+  # return outputs
+  list(data = data_clean, classes = classes)
+
 }
 
-#' @export
-#' @method stage_to_age default
-stage_to_age.default <- function(x, process, bias = no_bias(), settings = list()) {
-
+# internal function: compile stage-to-age data from an array
+stage_to_age_internal_array <- function(data, process, settings) {
+  
   # this will not work if we have not got a Leslie matrix process
   if (process$type != "leslie")
     stop("trying to model ages from stage data without an age-based model; this seems like a bad idea", call. = FALSE)
   
   # unpack settings
-  all_settings <- list(likelihood = multinomial)
+  all_settings <- list()
   all_settings[names(settings)] <- settings
   
-  # is the input data a matrix-like data type?
-  if (!is.matrix(x) & !is.data.frame(x))
-    stop("stage-to-age data must be a matrix or data.frame", call. = FALSE)
-
   # what dims does x have?
   dims <- dim(x)
   
   # if at least one of columns or rows do not line up with the number of classes, this will not work
   if (!(process$classes %in% dims))
     stop(paste0("one dimension of stage-to-age data must match the number of classes in process (", process$classes, ")"), call. = FALSE)
-
+  
   # format so that ages are always in columns
   if (dims[2] != process$classes) {
     
@@ -597,45 +681,57 @@ stage_to_age.default <- function(x, process, bias = no_bias(), settings = list()
     data_clean <- data
     
   }
-          
-  # want to tie everything together in a single output
-  data_module <- list(data = data_clean,
-                      process = process, 
-                      bias = bias,
-                      data_type = "stage_to_age",
-                      likelihood = all_settings$likelihood,
-                      classes = ncol(data_clean),
-                      classes_alt = nrow(data_clean))
   
-  # return outputs with class definition
-  as.integrated_data(data_module)
+  # set classes
+  classes <- c(ncol(data_clean), nrow(data_clean))
+  
+  # return outputs
+  list(data = data_clean, classes = classes)
   
 }   
 
-#' @export
-#' @rdname integrated_data
-#' 
-age_to_stage <- function(x, ...) {
-  UseMethod("age_to_stage")
+# internal function: compile age-to-stage data
+age_to_stage_internal <- function(data, process, settings) {
+  
+  # are data matrix_like?
+  is_matrix_like <- is.data.frame(data) | is.matrix(data)
+  
+  # can only handle matrix-like data types
+  if (!is_matrix_like)
+    stop("stage_to_age data must be a matrix or data.frame containing individual stages and ages or counts of stages and ages", call. = FALSE) 
+  
+  # send out to a function suited to the data type
+  if (ncol(data) != nrow(data)) {
+    out <- age_to_stage_internal_vectors
+  } else {
+    out <- age_to_stage_internal_array
+  }
+  
+  # return outputs
+  list(data = out$data_clean, classes = out$classes)
+  
 }
 
-#' @export
-#' @method age_to_stage formula
-age_to_stage.formula <- function(x, data, process, bias = no_bias(), settings = list()) {
+# internal function: compile age-to-stage data from vectors
+age_to_stage_internal_vectors <- function(data, process, settings) {
   
   # this will not work if we do not have a stage-structured process model
   if (process$type == "leslie")
     stop("trying to model stages from age data without a stage-based model; this seems like a bad idea", call. = FALSE)
   
   # need to unpack the settings
-  all_settings <- list(breaks = NULL,
-                       likelihood = multinomial)
+  all_settings <- list(breaks = NULL)
   all_settings[names(settings)] <- settings
   
   # parse formula to give outputs
-  var_names <- all.vars(x)
-  response <- get(var_names[1], data)
-  predictor <- get(var_names[2], data)
+  data_classes <- apply(data, 2, max)
+  response <- data[, 1]
+  predictor <- data[, 2]
+  
+  # check number of classes
+  classes <- c(process$classes, data_classes[1])
+  if (classes[1] < data_classes[2])
+    stop(paste0("there are more stages in the data than there are in the process model; consider specifying a new process model with ", data_classes[2], " stages"), call. = FALSE)
   
   # basic checks to see we missed something
   if (length(response) != length(predictor))
@@ -663,35 +759,23 @@ age_to_stage.formula <- function(x, data, process, bias = no_bias(), settings = 
   ones_vec <- rep(1, length(response))
   
   # need to truncate ages if they exceed the number of available classes
-  predictor <- ifelse(predictor >= process$classes, process_classes, predictor)
+  predictor <- ifelse(predictor >= classes[1], classes[1], predictor)
   
   # need to turn vectors into a transition matrix
-  n_bin <- max(response)
-  data_clean <- matrix(0, nrow = n_bin, ncol = process$classes)
-  for (i in seq_len(n_bin)) {
+  data_clean <- matrix(0, nrow = classes[2], ncol = classes[1[]])
+  for (i in seq_len(classes[2])) {
     predictor_sub <- predictor[response == i]
     classification <- tapply(ones_vec, predictor_sub, sum)
-    data_clean[i, match(names(classification), seq_len(process$classes))] <- classification
+    data_clean[i, match(names(classification), seq_len(classes[1]))] <- classification
   }
   
-  # want to tie everything together in a single output
-  data_module <- list(data = data_clean,
-                      process = process, 
-                      bias = bias,
-                      data_type = "age_to_stage",
-                      likelihood = all_settings$likelihood,
-                      classes = ncol(data_clean),
-                      classes_alt = n_bin)
-  
-  
-  # return outputs with class definition
-  as.integrated_data(data_module)
+  # return outputs
+  list(data = data_clean, classes = classes)
   
 }
 
-#' @export
-#' @method age_to_stage default
-age_to_stage.default <- function(x, process, bias = no_bias(), settings = list()) {
+# internal function: compile age-to-stage data from an array
+age_to_stage_internal_array <- function(data, process, settings) {
   
   # this will not work if we do not have a stage-structured process model
   if (process$type == "leslie")
@@ -700,10 +784,6 @@ age_to_stage.default <- function(x, process, bias = no_bias(), settings = list()
   # unpack settings
   all_settings <- list(likelihood = multinomial)
   all_settings[names(settings)] <- settings
-  
-  # is the input data a matrix-like data type?
-  if (!is.matrix(x) & !is.data.frame(x))
-    stop("age-to-stage data must be a matrix or data.frame", call. = FALSE)
   
   # what dims does x have?
   dims <- dim(x)
@@ -727,94 +807,15 @@ age_to_stage.default <- function(x, process, bias = no_bias(), settings = list()
     
   }
   
-  # want to tie everything together in a single output
-  data_module <- list(data = data_clean,
-                      process = process, 
-                      bias = bias,
-                      data_type = "age_to_stage",
-                      likelihood = all_settings$likelihood,
-                      classes = ncol(data_clean),
-                      classes_alt = nrow(data_clean))
+  # set classes
+  classes <- c(ncol(data_clean), nrow(data_clean))
   
-  # return outputs with class definition
-  as.integrated_data(data_module)
+  # return outputs
+  list(data = data_clean, classes = classes)
   
 }   
 
-#' @export
-#' @rdname integrated_data
-#' 
-community <- function(data, process, bias = no_bias(), settings = list()) {
-  
-  stop("community data are not supported (yet)", call. = FALSE)
-  
-  # unpack settings
-  all_settings <- list(likelihood = binomial)
-  all_settings[names(settings)] <- settings
-  
-  # want to tie everything together in a single output
-  data_module <- list(data = NULL,
-                      process = process, 
-                      bias = bias,
-                      data_type = "community",
-                      likelihood = all_settings$likelihood)
-  
-  # return outputs with class definition
-  as.integrated_data(data_module)
-  
-}
-
-# internal function: prepare predictors for other data sets
-prepare_predictors <- function(data) {
-  
-  # make sure predictor data are in a matrix or data.frame
-  if (!is.matrix(data) & !is.data.frame(data))
-    stop("predictor data must be a matrix or data.frame", call. = FALSE)
-  
-  # are there any NAs in the data?
-  na_col_check <- apply(data, 2, function(x) any(is.na(x)))
-  if (any(na_col_check))
-    warning("there are missing values in the predictor data; these will be ignored but fitted models will be more reproducible if NAs are handled prior to model fitting", call. = FALSE)
-  
-  # are there are any completely missing rows?
-  na_row_check <- apply(data, 1, function(x) all(is.na(x)))
-  
-  # if so, warn and remove
-  if (any(na_row_check)) {
-    warning(paste0("there are ", sum(na_row_check), " rows with completely missing data; these will be removed from all analyses"), call. = FALSE)
-    data_clean <- data[!na_row_check, ]
-  } else {
-    data_clean <- data
-  }
-
-  # return outputs
-  list(predictors = data_clean,
-       removed = na_row_check)
-  
-}
-
-#' @export
-#' @rdname integrated_data
-#' 
-is.integrated_data <- function(object) {
-  inherits(object, "integrated_data")
-}
-
-#' @export
-#' @rdname integrated_data
-#' 
-print.integrated_data <- function(x, ...) {
-  cat(paste0("This is an integrated_data object\n"))
-}
-
-#' @export
-#' @rdname integrated_data
-#' 
-summary.integrated_data <- function(object, ...) {
-  NULL
-}
-
 # internal function: create integrated_data object
 as.integrated_data <- function(object) {
-  as_class(object, name = "integrated_data", type = 'list')
+  as_class(object, name = "integrated_data", type = "list")
 }

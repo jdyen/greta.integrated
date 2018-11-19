@@ -31,7 +31,7 @@ age_abundance_loglik <- function(data, params) {
   observed <- data$bias$bias(observed_tmp, data$bias$params)
 
   # size obs model
-  distribution(observed) <- do.call(data$likelihood, list(mu))
+  distribution(observed) <- do.call(data$likelihood$distribution, list(mu))
   
   # could return mu at some point but want to keep clear for now
   NULL
@@ -72,7 +72,7 @@ stage_abundance_loglik <- function(data, params) {
   observed <- data$bias$bias(observed_tmp, data$bias$params)
   
   # size obs model
-  distribution(observed) <- do.call(data$likelihood, list(mu))
+  distribution(observed) <- do.call(data$likelihood$distribution, list(mu))
   
   NULL
   
@@ -154,10 +154,10 @@ binned_age_recapture_loglik <- function(data, params) {
   # not_detected is independent of age/size
   # survival depends on year and age
   # set up recursively (but still needs one entry for each individual)
-  
-  distribution(binary_capture_history) <- binomial(size = 1, p = bias)
+
+  distribution(binary_capture_history) <- do.call(data$likelihood$distribution, list(size = 1, p = bias))
   survival_hist_ones <- ones(length(p_survival_hist_stage))
-  distribution(survival_hist_ones) <- binomial(size = 1, p = p_survival_hist_stage)
+  distribution(survival_hist_ones) <- do.call(data$likelihood$distribution, list(size = 1, p = p_survival_hist_stage))
   # final_obs_ones <- ones(length(p_final_obs))
   # distribution(final_obs_ones) <- binomial(size = 1, p = p_final_obs)
   

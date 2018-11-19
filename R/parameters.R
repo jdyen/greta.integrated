@@ -1,13 +1,13 @@
 # internal function: create a set of parameters based on an integrated process object
-define_parameters <- function(process, classes_alt, n_predictors = NULL) {
+define_parameters <- function(process, classes_alt, n_fixed = NULL) {
   
   # do we need to deal with predictors?
-  if (!is.null(n_predictors)) {
+  if (!is.null(n_fixed)) {
 
     # what dims do we need to get to?
-    survival_dims <- c(n_predictors, process$classes)
-    transition_dims <- c(n_predictors, sum(process$masks$transition))
-    fecundity_dims <- c(n_predictors, sum(process$masks$fecundity))
+    survival_dims <- c(n_fixed, process$classes)
+    transition_dims <- c(n_fixed, sum(process$masks$transition))
+    fecundity_dims <- c(n_fixed, sum(process$masks$fecundity))
     
     # setup priors with correct dims
     survival <- change_dims_extract_op(process$priors$survival, survival_dims)
@@ -43,9 +43,7 @@ define_parameters <- function(process, classes_alt, n_predictors = NULL) {
   }
   
   # return outputs
-  list(classes = process$classes, classes_alt = classes_alt,
-       inits = inits,
-       n_predictors = n_predictors,
+  list(inits = inits,
        survival = survival, transition = transition, fecundity = fecundity,
        age_to_stage_conversion = age_stage, stage_to_age_conversion = stage_age)
   
@@ -62,27 +60,25 @@ construct_matrix <- function(data, parameters) {
   fec <- parameters$fecundity
   
   # can only have lists if the parameters have predictor variables
-  if (!is.null(parameters$n_predictors)) {
+  if (!is.null(data$predictors)) {
 
     # how many rows does this matrix need? (one for each set of predictors)    
-    n_obs <- nrow(data$predictors)
-
+    n_obs <- nrow(data$predictors$fixed)
+    
+    # reformat random variables
+    random <- data$predictors$random
+    n_cluster <- ncol(random)
+    n_group <- apply(random, 2, max)
+    random_vec <- c(sweep(random, 2, c(0, n_cluster[-length(n_cluster)]), "+"))
+    
     # extract noise prior to save some typing
     noise <- data$process$priors$noise
     
     # define additional noise in transitions
-    surv_noise <- change_dims_extract_op(noise, c(n_obs, parameters$classes))
-    tran_noise <- change_dims_extract_op(noise, c(n_obs, sum(masks$transition)))
-    fec_noise <- change_dims_extract_op(noise, c(n_obs, sum(masks$fecundity)))
-    
-    # we need to combine these two parameters with the same transformation
-    if (surv$op != surv_noise$op)
-      warning("transformation applied to survival does not match transformation of noise; using survival transformation", call. = FALSE)
-    if (tran$op != tran_noise$op)
-      warning("transformation applied to transition does not match transformation of noise; using survival transformation", call. = FALSE)
-    if (fec$op != fec_noise$op)
-      warning("transformation applied to fecundity does not match transformation of noise; using survival transformation", call. = FALSE)
-    
+    surv_sigma <- change_dims(noise, c(n_cluster, parameters$classes))
+    tran_sigma <- change_dims(noise, c(n_cluster, sum(masks$transition)))
+    fec_sigma <- change_dims(noise, c(n_cluster, sum(masks$fecundity)))
+
     # we can't make a linear predictor if the raw parameters come from multiple distributions
     if (length(surv$children) > 1)
       stop("transformed prior for survival has multiple inputs, which will not work in a model that includes predictors", call. = FALSE)
@@ -93,10 +89,18 @@ construct_matrix <- function(data, parameters) {
     if (length(surv_noise$children) > 1)
       stop("transformed prior for noise has multiple inputs, which will not work in a model that includes predictors", call. = FALSE)
     
+    # add some random effects
+    surv_noise_baseline <- normal(0.0, rep(surv_sigma, times = n_group))
+    surv_noise <- rowSums(greta_array(surv_noise_baseline[random_vec], c(n_obs, n_cluster)))
+    tran_noise_baseline <- normal(0.0, rep(tran_sigma, times = n_group))
+    tran_noise <- rowSums(greta_array(tran_noise_baseline[random_vec], c(n_obs, n_cluster)))
+    fec_noise_baseline <- normal(0.0, rep(fec_sigma, times = n_group))
+    fec_noise <- rowSums(greta_array(fec_noise_baseline[random_vec], c(n_obs, n_cluster)))
+    
     # setup linear predictors
-    surv_link <- data$predictors %*% surv$children[[1]] + surv_noise$children[[1]]
-    tran_link <- data$predictors %*% tran$children[[1]] + tran_noise$children[[1]]
-    fec_link <- data$predictors %*% fec$children[[1]] + fec_noise$children[[1]]
+    surv_link <- data$predictors %*% surv$children[[1]] + surv_noise
+    tran_link <- data$predictors %*% tran$children[[1]] + tran_noise
+    fec_link <- data$predictors %*% fec$children[[1]] + fec_noise
     
     # recombine link nodes with correct transformations
     if (length(surv$op_args)) {
@@ -114,6 +118,19 @@ construct_matrix <- function(data, parameters) {
     } else {
       fecundity_all <- do.call(fec$op, list(fec_link))
     }
+    
+    # check bounds of new nodes and warn if not reasonable
+    survival_bounds <- extract_bounds(survival_all)
+    transition_bounds <- extract_bounds(transition_all)
+    fecundity_bounds <- extract_bounds(fecundity_all)
+    
+    # are these reasonable?
+    if (survival_bounds[1] < 0 | survival_bounds[2] > 1)
+      warning("the transformed prior (including predictor effects) for survival has bounds outside of [0, 1]; is this reasonable?", call. = FALSE)
+    if (transition_bounds[1] < 0 | transition_bounds[2] > 1)
+      warning("the transformed prior (including predictor effects) for transition has bounds outside of [0, 1]; is this reasonable?", call. = FALSE)
+    if (fecundity_bounds[1] < 0)
+      warning("the transformed prior (including predictor effects) for fecundity has a lower bound less than 0; is this reasonable?", call. = FALSE)
     
     # construct population matrix
     mat1 <- mat2 <- zeros(n_obs, parameters$classes, parameters$classes)

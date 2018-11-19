@@ -88,13 +88,15 @@ integrated_model <- function(...) {
         stop("predictors must be included for all data modules that share a single process", call. = FALSE)
       
       # how many predictors?
-      n_predictors <- sapply(data_sub[includes_predictors], function(x) ncol(x$predictors))
+      n_fixed <- sapply(data_sub[includes_predictors], function(x) ncol(x$fixed))
+      n_random <- sapply(data_sub[includes_predictors], function(x) ncol(x$random))
       
       # do these match in number? (assuming they match in predictor sets too; perhaps warn about this?)
-      if (length(unique(n_predictors)) > 1)
+      if (length(unique(n_fixed)) > 1 | length(unique(n_random)) > 1)
         stop("all data modules that share a single process must have the same number of predictors", call. = FALSE)
       
-      n_predictors <- unique(n_predictors)
+      n_fixed <- unique(n_fixed)
+      n_random <- unique(n_random)
       
     }
 
@@ -102,7 +104,7 @@ integrated_model <- function(...) {
     process_list[[i]] <- data_modules[[which(process_id == i)[1]]]$process
     
     # do we need to deal with age-stage conversions?
-    classes_alt <- sapply(data_modules[which(process_id == i)], function(x) x$classes_alt)
+    classes_alt <- sapply(data_modules[which(process_id == i)], function(x) x$classes[2])
     
     # would like this not be a list
     classes_alt <- unlist(classes_alt)
@@ -120,7 +122,7 @@ integrated_model <- function(...) {
       # pull together a set of parameters based on the details of this process
       parameters[[i]] <- define_parameters(process = process_list[[i]],
                                            classes_alt = classes_alt,
-                                           n_predictors = n_predictors)
+                                           n_fixed = n_fixed)
 
     } else {
       
@@ -139,6 +141,10 @@ integrated_model <- function(...) {
     
     # prepare matrix
     parameters_tmp$matrix <- construct_matrix(data_modules[[i]], parameters[[process_id[i]]])
+    
+    # save the matrix with a unique name
+    parameters[[process_id[i]]] <- c(parameters[[process_id[i]]], list(parameters_tmp$matrix))
+    names(parameters[[process_id[i]]])[length(parameters[[process_id[i]]])] <- paste0("matrix", i)
     
     # we need to add a couple of things from the process module
     parameters_tmp$density <- process_list[[process_id[i]]]$density
