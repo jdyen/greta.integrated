@@ -52,7 +52,7 @@ integrated_model <- function(...) {
     stop("integrated_model only takes integrated_data objects as arguments", call. = FALSE)
 
   # which data types are we dealing with?
-  data_types <- sapply(data_modules, function(x) x$data_type)
+  data_types <- sapply(data_modules, function(x) x$likelihood$type)
   
   # are all of these implemented?
   implemented <- c("age_abundance", "stage_abundance", "age_recapture",
@@ -88,8 +88,8 @@ integrated_model <- function(...) {
         stop("predictors must be included for all data modules that share a single process", call. = FALSE)
       
       # how many predictors?
-      n_fixed <- sapply(data_sub[includes_predictors], function(x) ncol(x$fixed))
-      n_random <- sapply(data_sub[includes_predictors], function(x) ncol(x$random))
+      n_fixed <- sapply(data_sub[includes_predictors], function(x) ncol(x$predictors$fixed))
+      n_random <- sapply(data_sub[includes_predictors], function(x) ncol(x$predictors$random))
       
       # do these match in number? (assuming they match in predictor sets too; perhaps warn about this?)
       if (length(unique(n_fixed)) > 1 | length(unique(n_random)) > 1)
@@ -151,7 +151,7 @@ integrated_model <- function(...) {
     parameters_tmp$process_class <- process_list[[process_id[i]]]$type
 
     # choose appropriate likelihood based on type of data
-    loglik_fun <- switch(data_modules[[i]]$data_type,
+    loglik_fun <- switch(data_modules[[i]]$likelihood$type,
                          age_abundance = age_abundance_loglik,
                          stage_abundance = stage_abundance_loglik,
                          binned_age_recapture = binned_age_recapture_loglik,

@@ -267,105 +267,98 @@ summary.integrated_process <- function(object, ...) {
 #' 
 plot.integrated_process <- function(x, ...) {
   
-  ### REDO with DiagrammeR to create a stage-transition diagram
-  
-  
-  # what are we working with?
-  tran <- x$masks$transition
-  fec <- x$masks$fecundity
-
-  # do any overlap?
-  all <- tran + fec
-  overlap <- any(all > 1)
-  
-  # define a matrix of colours
-  col_mat <- ifelse(tran, 1, 0)
-  col_mat <- ifelse(fec, 2, col_mat)
-  
-  # set a colour palette
-  col_pal <- c("gray95", "#57A0D3", "#1D2951", "#0E4D92")
-  
-  # easy if they don't overlap
-  if (!overlap) {
-
-    # pull out old settings to restore
-    old_mar <- par()$mar
-
-    # remove ridiculously wide borders
-    par(mar = c(5, 3, 0.7, 0.7))
-    
-    # plot with colours according to col_mat
-    image(t(col_mat),
-          col = col_pal[1:3],
-          xaxt = "n", yaxt = "n",
-          bty = "n")
-    
-    # add a legend
-    legend(0.5, -0.25, xpd = TRUE,
-           fill = col_pal,
-           horiz = TRUE,
-           border = c("gray70", col_pal[2:3]),
-           bty = "n",
-           cex = 1.25,
-           xjust = 0.5,
-           legend = c("none", "transition", "fecundity"))
-    
-    # add some labels
-    type <- ifelse(x$type == "leslie", "Age", "Stage")
-    mtext(paste0(type, " at time t"), side = 1, adj = 0.5, line = 1, cex = 1.5)
-    mtext(paste0(type, " at time t + 1"), side = 2, adj = 0.5, line = 1.5, cex = 1.5)
-    
-    # mark low and high ends
-    mtext("Low", side = 1, adj = 0.01, line = 0.2, cex = 1)
-    mtext("High", side = 1, adj = 0.99, line = 0.2, cex = 1)
-    mtext("Low", side = 2, adj = 0.01, line = 0.2, cex = 1)
-    mtext("High", side = 2, adj = 0.99, line = 0.2, cex = 1)
-    
-    # reset plot settings
-    par(mar = old_mar)
-    
-  } else {
-    
-    # add some new colours if they overlap
-    col_mat[tran + fec == 2] <- 3
-
-    # pull out old settings to restore
-    old_mar <- par()$mar
-    
-    # remove ridiculously wide borders
-    par(mar = c(5, 3, 0.7, 0.7))
-    
-    # plot with colours according to col_mat
-    image(t(col_mat),
-          col = col_pal,
-          xaxt = "n", yaxt = "n",
-          bty = "n")
-    
-    # add a legend
-    legend(0.5, -0.25, xpd = TRUE,
-           fill = col_pal,
-           horiz = TRUE,
-           border = c("gray70", col_pal[2:4]),
-           bty = "n",
-           cex = 1,
-           xjust = 0.5,
-           legend = c("none", "transition", "fecundity", "both"))
-    
-    # add some labels
-    type <- ifelse(x$type == "leslie", "Age", "Stage")
-    mtext(paste0(type, " at time t"), side = 1, adj = 0.5, line = 1, cex = 1.5)
-    mtext(paste0(type, " at time t + 1"), side = 2, adj = 0.5, line = 1.5, cex = 1.5)
-    
-    # mark low and high ends
-    mtext("Low", side = 1, adj = 0.01, line = 0.2, cex = 1)
-    mtext("High", side = 1, adj = 0.99, line = 0.2, cex = 1)
-    mtext("Low", side = 2, adj = 0.01, line = 0.2, cex = 1)
-    mtext("High", side = 2, adj = 0.99, line = 0.2, cex = 1)
-    
-    # reset plot settings
-    par(mar = old_mar)
-    
+  if (!requireNamespace("DiagrammeR", quietly = TRUE)) {
+    stop("the DiagrammeR package must be installed to plot greta.integrated process modules",
+         call. = FALSE)
   }
+  
+  # set up graph
+  transition_mat <- t(x$masks$transition)
+  fecundity_mat <- t(x$masks$fecundity)
+  full_mat <- transition_mat + fecundity_mat
+
+  # pull out proc type
+  type <- ifelse(proc$type == "leslie", "Age", "Stage")
+  
+  gr <- DiagrammeR::from_adj_matrix(full_mat,
+                                    mode = "directed",
+                                    use_diag = TRUE)
+  
+  # how many nodes?
+  n_nodes <- nrow(gr$nodes_df)
+  
+  # edge types
+  to <- gr$edges_df$to
+  from <- gr$edges_df$from
+  
+  # identify different node types
+  node_type <- rep("pre_reprod", n_nodes)
+  node_type[from[to == 1 & from > 1]] <- "reprod"
+  max_reprod <- max(which(node_type == "reprod"))
+  node_type[seq_len(n_nodes) > max_reprod] <- "post_reprod"
+
+  # change node types and colours based on node type
+  node_shapes <- rep("square", n_nodes)
+  node_shapes[node_type == "reprod"] <- "circle"
+  node_shapes[node_type == "post_reprod"] <- "diamond"
+
+  col_pal <- c("gray50", "#57A0D3", "#1D2951", "#0E4D92")
+  col_pal_light <- ggplot2::alpha(col_pal, 0.5)
+  node_edge_colours <- rep(col_pal[1], n_nodes)
+  node_edge_colours[node_type == "reprod"] <- col_pal[4]
+  node_edge_colours[node_type == "post_reprod"] <- col_pal[3]
+
+  node_colours <- rep(col_pal_light[2], n_nodes)
+  node_colours[node_type == "reprod"] <- col_pal_light[4]
+  node_colours[node_type == "post_reprod"] <- col_pal_light[3]
+
+  node_size <- rep(0.9, n_nodes)
+  node_size[node_type == "reprod"] <- 0.9
+  node_size[node_type == "post_reprod"] <- 1.0
+
+  node_labels <- paste(type, seq_len(n_nodes), sep = " ")
+  
+  edge_style <- rep("solid", length(to))
+  
+  # node options
+  gr$nodes_df$type <- node_type
+  gr$nodes_df$fontcolor <- col_pal[4]
+  gr$nodes_df$fontsize <- 12
+  gr$nodes_df$penwidth <- 2
+  
+  gr$nodes_df$shape <- node_shapes
+  gr$nodes_df$color <- node_edge_colours
+  gr$nodes_df$fillcolor <- node_colours
+  gr$nodes_df$width <- node_size
+  gr$nodes_df$height <- node_size * 0.8
+  gr$nodes_df$label <- node_labels
+  
+  # edge options
+  gr$edges_df$color <- "Gainsboro"
+  gr$edges_df$fontname <- "Avenir"
+  gr$edges_df$fontcolor <- "gray70"
+  gr$edges_df$fontsize <- 14
+  gr$edges_df$penwidth <- 4
+
+  edge_types <- rep("transition", length(from))
+  edge_types <- ifelse(from == to, "survival", edge_types)
+  edge_types <- ifelse(from > to, "fecundity", edge_types)
+
+  gr$edges_df$label <- edge_types
+  gr$edges_df$style <- edge_style
+
+  # set the layout type
+  gr$global_attrs$value[gr$global_attrs$attr == "layout"] <- "dot"
+  
+  # make it horizontal
+  gr$global_attrs <- rbind(gr$global_attrs,
+                           data.frame(attr = "rankdir",
+                                      value = "LR",
+                                      attr_type = "graph"))
+  
+  grViz <- DiagrammeR::render_graph(gr)
+  attr(grViz, "dgr_graph") <- gr
+  grViz
 
 }
 

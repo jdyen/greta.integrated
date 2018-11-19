@@ -56,8 +56,10 @@ add_data <- function(data, process, likelihood, bias = no_bias(), settings = lis
       stop("predictors must be created with the `add_predictors()` function", call. = FALSE)
     
     # check that dims match and remove observations from data if any predictors are removed
-    data <- match_dims(data, predictors)
-  
+    if (likelihood$type %in% c("age_abundance", "stage_abundance", "age_cjs", "stage_cjs"))
+      if (ncol(data$data) != nrow(predictors$fixed))
+        stop("there should be one row of predictors for each column in data", call. = FALSE)
+
   }
   
   # want to tie everything together in a single output
@@ -782,7 +784,7 @@ age_to_stage_internal_array <- function(data, process, settings) {
     stop("trying to model stages from age data without a stage-based model; this seems like a bad idea", call. = FALSE)
   
   # unpack settings
-  all_settings <- list(likelihood = multinomial)
+  all_settings <- list()
   all_settings[names(settings)] <- settings
   
   # what dims does x have?

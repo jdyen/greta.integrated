@@ -39,12 +39,17 @@
 add_predictors <- function(formula, data) {
   
   # try and find the data if not supplied
-  if (missing(data))
-    data <- environment(formula)
+  if (missing(data)) {
+    data_env <- environment(formula)
+  } else {
+    if (!is.data.frame(data))
+      data <- as.data.frame(data)
+    data_env <- as.environment(data)
+  }
   
   # parse formula
   response <- all.vars(formula)[1] 
-  terms <- terms(formula)
+  terms <- terms(formula, data = data)
   random <- grep("\\|", attributes(terms)$term.labels)
   var_names <- all.vars(delete.response(terms))
   full_var_list <- colnames(attributes(terms)$factors)
@@ -75,37 +80,42 @@ add_predictors <- function(formula, data) {
   
   # create x and z objects to return
   if (length(fixed_vars)) {
-    x_tmp <- mget(fixed_vars, envir = as.environment(data), inherits = TRUE)
+    x_tmp <- mget(fixed_vars, envir = data_env, inherits = TRUE)
   }
   if (length(random_vars)) {
-    z_tmp <- mget(random_vars, envir = as.environment(data), inherits = TRUE)
+    z_tmp <- mget(random_vars, envir = data_env, inherits = TRUE)
     z_tmp <- lapply(z_tmp, function(x) as.integer(as.factor(x)))
   }
   
   # create model matrix of fixed variables
   if (length(fixed_vars)) {
     x <- model.matrix(as.formula(paste0("~", paste(full_var_list_fixed, collapse = " + "))), data = x_tmp)
-    x <- x[, -1]
   } else {
-    x <- matrix(0, nrow = length(y), ncol = 1)
+    x <- matrix(1, nrow = nrow(z_tmp))
   }
   
   # create model matrix of random variables
   if (length(random_vars)) {
-    z <- model.matrix(as.formula(paste0(" ~ -1 + ", paste(random_vars, collapse = " + "))), data = z_tmp)
+    z <- model.matrix(as.formula(paste0(" ~ ", paste(random_vars, collapse = " + "))), data = z_tmp)
+    z <- z[, -1]
   } else {
     z <- NULL
   }
   
   # are there are any missing data in the fixed or random effects?
-  na_rows <- apply(x, 1, function(x) any(is.na(x)))
+  if (!is.null(x)) {
+    na_rows <- apply(x, 1, function(x) any(is.na(x)))
+  } else {
+    na_rows <- rep(FALSE, nrow(z))
+  }
   if (!is.null(z))
     na_rows <- na_rows | apply(z, 1, function(x) any(is.na(x)))
   
   # remove any rows with missing fixed or random effects
   if (any(na_rows)) {
     warning(paste0("there are ", sum(na_rows), " rows with missing data; these will be removed from all analyses"), call. = FALSE)
-    x <- x[!na_rows, ]
+    if (!is.null(x))
+      x <- x[!na_rows, ]
     if (!is.null(z))
       z <- z[!na_rows]
   }
