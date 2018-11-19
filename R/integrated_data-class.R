@@ -9,7 +9,7 @@
 #' @param likelihood something
 #' @param bias a bias function that connects observed and modelled data (see details)
 #' @param settings a named list of settings passed to data formatting functions (see details)
-#' @param predictors
+#' @param predictors object of class \link[greta.integrated]{integrated_predictor}
 #' @param ... additional arguments to \link[base]{print} and \link[base]{summary} methods (currently ignored)
 #' @param x an \code{integrated_data} object
 #' @param object an \code{integrated_data} object

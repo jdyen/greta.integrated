@@ -2,35 +2,41 @@
 % Please edit documentation in R/integrated_data-class.R
 \name{integrated_data}
 \alias{integrated_data}
+\alias{add_data}
 \alias{age_abundance}
 \alias{stage_abundance}
-\alias{age_recapture}
-\alias{stage_recapture}
+\alias{age_cjs}
+\alias{stage_cjs}
 \alias{stage_to_age}
 \alias{age_to_stage}
+\alias{occupancy}
+\alias{abundance}
 \alias{community}
 \alias{is.integrated_data}
 \alias{print.integrated_data}
 \alias{summary.integrated_data}
 \title{create integrated data objects}
 \usage{
-age_abundance(data, process, bias = no_bias(), settings = list(),
-  predictors = NULL)
+add_data(data, process, likelihood, bias = no_bias(),
+  settings = list(), predictors = NULL)
 
-stage_abundance(data, process, bias = no_bias(), settings = list(),
-  predictors = NULL)
+age_abundance(distribution = poisson)
 
-age_recapture(data, process, bias = no_bias(), settings = list(),
-  predictors = NULL)
+stage_abundance(distribution = poisson)
 
-stage_recapture(data, process, bias = no_bias(), settings = list(),
-  predictors = NULL)
+age_cjs(distribution = binomial)
 
-stage_to_age(x, ...)
+stage_cjs(distribution = binomial)
 
-age_to_stage(x, ...)
+stage_to_age(distribution = multinomial)
 
-community(data, process, bias = no_bias(), settings = list())
+age_to_stage(distribution = multinomial)
+
+occupancy(classes, density = no_density(), priors = list())
+
+abundance(distribution = poisson)
+
+community(distribution = bernoulli)
 
 is.integrated_data(object)
 
@@ -43,15 +49,19 @@ is.integrated_data(object)
 
 \item{process}{an \link[greta.integrated]{integrated_process} object}
 
+\item{likelihood}{something}
+
 \item{bias}{a bias function that connects observed and modelled data (see details)}
 
 \item{settings}{a named list of settings passed to data formatting functions (see details)}
 
+\item{predictors}{object of class \link[greta.integrated]{integrated_predictor}}
+
+\item{object}{an \code{integrated_data} object}
+
 \item{x}{an \code{integrated_data} object}
 
 \item{...}{additional arguments to \link[base]{print} and \link[base]{summary} methods (currently ignored)}
-
-\item{object}{an \code{integrated_data} object}
 }
 \value{
 An object of class \code{integrated_data}, which contains information on the data module and
