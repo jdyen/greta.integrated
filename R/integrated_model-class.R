@@ -227,7 +227,6 @@ plot.integrated_model <- function(x, y, ...) {
   n_process <- length(x)
   
   # set up a separate graph for each process
-  gr_list <- vector("list", length = n_process)
   for (i in seq_len(n_process)) {
     
     # subset to a single process
@@ -274,11 +273,18 @@ plot.integrated_model <- function(x, y, ...) {
 plot_integrated_internal <- function(x) {
 
   # what are its key features?
-  process_type <- x_sub$process
-  type <- x_sub$data_types
+  process_type <- x$process
+  type <- x$data_types
   
   # are we dealing with any age-to-stage conversions?
   conversion <- type %in% c("age_to_stage", "stage_to_age")
+  
+  # are there predictors?
+  n_rand <- unlist(x$n_random)
+  n_fix <- unlist(x$n_fixed)
+  includes_predictors <- !is.null(n_fix) | !is.null(n_rand)
+  n_rand <- ifelse(is.null(n_rand), 0, n_rand)
+  n_fix <- ifelse(is.null(n_fix), 0, n_fix)
   
   # separate conversions and non-conversions
   true_data <- !conversion
@@ -320,6 +326,16 @@ plot_integrated_internal <- function(x) {
     
   }
 
+  
+  if (includes_predictors) {
+    
+    full_mat <- cbind(full_mat, rep(0, nrow(full_mat)))
+    full_mat <- rbind(full_mat, c(1, rep(0, nrow(full_mat))))
+    node_type <- c(node_type, "predictor")
+    
+  }
+  
+  # build graph from adjacency matrix
   gr <- DiagrammeR::from_adj_matrix(full_mat,
                                     mode = "directed",
                                     use_diag = TRUE)
@@ -338,11 +354,11 @@ plot_integrated_internal <- function(x) {
 
   col_pal <- c("#57A0D3", "#4F7942", "#0E4D92", "#964000")
   col_pal_light <- paste0(col_pal, "50")
-  node_edge_colours <- rep(col_pal[1], n_nodes)
+  node_edge_colours <- rep(col_pal[3], n_nodes)
   node_edge_colours[node_type == "process"] <- col_pal[2]
   node_edge_colours[node_type == "converter"] <- col_pal[4]
 
-  node_colours <- rep(col_pal_light[1], n_nodes)
+  node_colours <- rep(col_pal_light[3], n_nodes)
   node_colours[node_type == "process"] <- col_pal_light[2]
   node_colours[node_type == "converter"] <- col_pal_light[4]
 
@@ -354,6 +370,7 @@ plot_integrated_internal <- function(x) {
   node_labels[node_type == "conversion"] <- ifelse(process_type == "leslie", "Stage-to-age", "Age-to-stage")
   node_labels[node_type == "conversion"] <- paste(node_labels[node_type == "conversion"], paste0("(", names(type)[conversion], ")"), sep = "\n")
   node_labels[node_type == "converter"] <- paste(ifelse(process_type == "leslie", "Age", "Stage"), " conversion")
+  node_labels[node_type == "predictor"] <- paste("Predictor variables", paste0("(", n_fix, " fixed, ", n_rand, " random", ")"), sep = "\n")
   
   data_type <- rep("Data", n_data)
   data_type[grep("abundance", type)] <- "Abundance"
@@ -380,7 +397,7 @@ plot_integrated_internal <- function(x) {
   gr$nodes_df$color <- node_edge_colours
   gr$nodes_df$fillcolor <- node_colours
   gr$nodes_df$width <- node_size
-  gr$nodes_df$width[node_type %in% c("true_data", "conversion")] <- 1.5
+  gr$nodes_df$width[node_type %in% c("true_data", "conversion", "predictor")] <- 1.5
   gr$nodes_df$width[node_type %in% c("converter")] <- 1.6
   gr$nodes_df$height[node_type %in% c("converter")] <- 1
   gr$nodes_df$height <- node_size * 0.8
