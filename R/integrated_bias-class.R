@@ -53,38 +53,38 @@ no_bias <- function() {
 #' @export
 #' @rdname integrated_bias
 #' 
-detection <- function(p_detect = beta(1, 1)) {
+detection <- function(detection = beta(1, 1)) {
   
   # is the parameter of a reasonable class?
-  if ("greta_array" %in% class(p_detect)) {
+  if ("greta_array" %in% class(detection)) {
     
     # check if it's a distribution
-    node <- get_node(p_detect)
+    node <- get_node(detection)
     
     # is it a distribution?
     if (!is.null(node$distribution)) {
       
       # if so, do the parameters have reasonable bounds?
-      p_bounds <- extract_bounds(p_detect)
+      p_bounds <- extract_bounds(detection)
       
     } else {
      
       # if not, does it have reasonable dims?
-      if (any(dim(p_detect) != 1))
-        stop("p_detect must be a scalar numeric, scalar data greta_array, or greta distribution", call. = FALSE)
+      if (any(dim(detection) != 1))
+        stop("detection must be a scalar numeric, scalar data greta_array, or greta distribution", call. = FALSE)
       
     }
     
   } else {
     
-    if (is.numeric(p_detect)) {
+    if (is.numeric(detection)) {
       
       # check length
-      if (length(p_detect) > 1)
-        stop("p_detect must be a scalar numeric, scalar data greta_array, or greta distribution", call. = FALSE)
+      if (length(detection) > 1)
+        stop("detection must be a scalar numeric, scalar data greta_array, or greta distribution", call. = FALSE)
       
       # do the parameters have reasonable bounds?
-      p_bounds <- range(p_detect)
+      p_bounds <- range(detection)
       
     }
     
@@ -92,13 +92,13 @@ detection <- function(p_detect = beta(1, 1)) {
     
   # warn if bounds are not logical
   if (p_bounds[1] < 0 | p_bounds[2] > 1)
-    warning("the prior for p_detect has bounds outside of [0, 1]; is this reasonable?", call. = FALSE)
+    warning("the prior for detection has bounds outside of [0, 1]; is this reasonable?", call. = FALSE)
 
   # set up correction function
   bias_fn <- function(x, params) params$detection * x
 
   bias <- list(bias = bias_fn,
-               params = list(detection = p_detect))
+               params = list(detection = detection))
   
   # return outputs
   as.integrated_bias(bias)

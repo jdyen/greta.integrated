@@ -265,7 +265,7 @@ summary.integrated_process <- function(object, ...) {
 #' @export
 #' @rdname integrated_process
 #' 
-plot.integrated_process <- function(x, ...) {
+plot.integrated_process <- function(x, y, ...) {
   
   if (!requireNamespace("DiagrammeR", quietly = TRUE)) {
     stop("the DiagrammeR package must be installed to plot greta.integrated process modules",
@@ -277,8 +277,8 @@ plot.integrated_process <- function(x, ...) {
   fecundity_mat <- t(x$masks$fecundity)
   full_mat <- transition_mat + fecundity_mat
 
-  # pull out proc type
-  type <- ifelse(proc$type == "leslie", "Age", "Stage")
+  # pull out process type
+  type <- ifelse(x$type == "leslie", "Age", "Stage")
   
   gr <- DiagrammeR::from_adj_matrix(full_mat,
                                     mode = "directed",
@@ -290,6 +290,10 @@ plot.integrated_process <- function(x, ...) {
   # edge types
   to <- gr$edges_df$to
   from <- gr$edges_df$from
+  
+  # change type back to stage if there are multiple "age x+" terms
+  if (sum(to == from) > 1)
+    type <- "Stage"
   
   # identify different node types
   node_type <- rep("pre_reprod", n_nodes)
@@ -316,7 +320,12 @@ plot.integrated_process <- function(x, ...) {
   node_size[node_type == "reprod"] <- 0.9
   node_size[node_type == "post_reprod"] <- 1.0
 
+  # add some labels for the nodes (age or stage depending on type of model)
   node_labels <- paste(type, seq_len(n_nodes), sep = " ")
+  
+  # if it's a Leslie matrix and to == from, we have an "age+" situation
+  if (type == "Age")
+    node_labels[from[to == from]] <- paste0(node_labels[from[to == from]], "+")
   
   edge_style <- rep("solid", length(to))
   

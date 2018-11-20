@@ -468,10 +468,6 @@ stage_cjs_internal <- function(data, process, settings) {
   all_settings <- list(breaks = NULL)
   all_settings[names(settings)] <- settings
   
-  # warn that predictors are currently ignored for mark-recapture data
-  if (!is.null(predictors))
-    warning("predictors are not supported (yet) for stage_recapture data; provided predictors will be ignored", call. = FALSE)
-  
   # is the process model a stage or age based model?
   class_type <- ifelse(process$type == "leslie", "age", "stage")
   
@@ -504,6 +500,12 @@ stage_cjs_internal <- function(data, process, settings) {
     
     # just need to clean up some NAs afterwards
     data_binned <- ifelse(is.na(data_binned), 0, data_binned)
+    
+    # check if there is a stage-to-age conversion here
+    if (!all(seq_len(max(data_binned)) %in% seq_len(classes[1]))) {
+      warning("it looks like you're fitting an age-structured model to stage data; is this correct?", call. = FALSE)
+      classes[2] <- max(data_binned)
+    }
     
     # that's it, just return this
     data_clean <- data_binned
@@ -579,13 +581,13 @@ stage_to_age_internal <- function(data, process, settings) {
   
   # send out to a function suited to the data type
   if (ncol(data) != nrow(data)) {
-    out <- stage_to_age_internal_vectors
+    out <- stage_to_age_internal_vectors(data, process, settings)
   } else {
-    out <- stage_to_age_internal_array
+    out <- stage_to_age_internal_array(data, process, settings)
   }
   
   # return outputs
-  list(data = out$data_clean, classes = out$classes)
+  list(data = out$data, classes = out$classes)
   
 }
 
@@ -609,7 +611,9 @@ stage_to_age_internal_vectors <- function(data, process, settings) {
   classes <- c(process$classes, data_classes[1])
   if (classes[1] < data_classes[2])
     stop(paste0("there are more age classes in the data than there are in the process model; consider specifying a new process model with ", data_classes[2], " age classes"), call. = FALSE)
-  
+  if (classes[1] > data_classes[2])
+    warning("there are more age classes in the data than there are in the process model; missing ages will be assumed to be unobserved", call. = FALSE)
+    
   # basic checks to see if we have missed something
   if (length(response) != length(predictor))
     stop(paste0(var_names[1], " and ", var_names[2], " should be the same length"), call. = FALSE)
@@ -641,8 +645,8 @@ stage_to_age_internal_vectors <- function(data, process, settings) {
   # need to turn vectors into a transition matrix
   data_clean <- matrix(0, nrow = classes[2], ncol = classes[1])
   for (i in seq_len(classes[2])) {
-    predictor_sub <- predictor[response == i]
-    classification <- tapply(ones_vec, predictor_sub, sum)
+    idx <- response == i
+    classification <- tapply(ones_vec[idx], predictor[idx], sum)
     data_clean[i, match(names(classification), seq_len(classes[1]))] <- classification
   }
   
@@ -704,13 +708,13 @@ age_to_stage_internal <- function(data, process, settings) {
   
   # send out to a function suited to the data type
   if (ncol(data) != nrow(data)) {
-    out <- age_to_stage_internal_vectors
+    out <- age_to_stage_internal_vectors(data, process, settings)
   } else {
-    out <- age_to_stage_internal_array
+    out <- age_to_stage_internal_array(data, process, settings)
   }
   
   # return outputs
-  list(data = out$data_clean, classes = out$classes)
+  list(data = out$data, classes = out$classes)
   
 }
 
@@ -734,7 +738,9 @@ age_to_stage_internal_vectors <- function(data, process, settings) {
   classes <- c(process$classes, data_classes[1])
   if (classes[1] < data_classes[2])
     stop(paste0("there are more stages in the data than there are in the process model; consider specifying a new process model with ", data_classes[2], " stages"), call. = FALSE)
-  
+  if (classes[1] > data_classes[2])
+    warning("there are more stages in the process model than in the data; this model will assume that missing stages are unobserved", call. = FALSE)
+
   # basic checks to see we missed something
   if (length(response) != length(predictor))
     stop(paste0(var_names[1], " and ", var_names[2], " should be the same length"), call. = FALSE)
@@ -764,10 +770,10 @@ age_to_stage_internal_vectors <- function(data, process, settings) {
   predictor <- ifelse(predictor >= classes[1], classes[1], predictor)
   
   # need to turn vectors into a transition matrix
-  data_clean <- matrix(0, nrow = classes[2], ncol = classes[1[]])
+  data_clean <- matrix(0, nrow = classes[2], ncol = classes[1])
   for (i in seq_len(classes[2])) {
-    predictor_sub <- predictor[response == i]
-    classification <- tapply(ones_vec, predictor_sub, sum)
+    idx <- response == i
+    classification <- tapply(ones_vec[idx], predictor[idx], sum)
     data_clean[i, match(names(classification), seq_len(classes[1]))] <- classification
   }
   

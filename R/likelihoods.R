@@ -79,20 +79,23 @@ stage_abundance_loglik <- function(data, params) {
 }
 
 # internal function: define age-recapture log-likelihood
-binned_age_recapture_loglik <- function(data, params) {
+age_cjs_loglik <- function(data, params) {
   
-  ## TWO POSSIBILITIES: observed ages, modelled ages; observed ages, modelled stages
-  process_class <- params$process_class
-  if (process_class == "stage") {
-    # we're modelling stages, need a conversion
-  } else {
-    # we're modelling ages, no conversion needed
-  }
+  NULL
+  
+}
+
+# internal function: define stage-recapture log-likelihood
+stage_cjs_loglik <- function(data, params) {
   
   # unpack params
-  survival <- params$survival
-  stage_to_age <- params$stage_to_age_conversion
-  classes <- params$classes
+  survival <- apply(params$matrix, c(1, 3), "sum")
+  classes <- nrow(params$inits)
+  if (params$process_class == "leslie") {
+    stage_to_age <- params$stage_to_age_conversion
+  } else {
+    stage_to_age <- diag(classes)
+  }
   bias <- params$bias
   
   # calculate first and final observations
@@ -102,7 +105,7 @@ binned_age_recapture_loglik <- function(data, params) {
   # pull out first and final ages
   first_class <- apply(data$data, 1, function(x) x[min(which(x > 0))])
   final_class <- apply(data$data, 1, function(x) x[max(which(x > 0))])
-
+  
   # number of years alive
   n_alive <- final_obs - first_obs
   
@@ -154,8 +157,9 @@ binned_age_recapture_loglik <- function(data, params) {
   # not_detected is independent of age/size
   # survival depends on year and age
   # set up recursively (but still needs one entry for each individual)
-
-  distribution(binary_capture_history) <- do.call(data$likelihood$distribution, list(size = 1, p = bias))
+  
+  if (!is.null(data$bias$params$detection))
+    distribution(binary_capture_history) <- do.call(data$likelihood$distribution, list(size = 1, p = data$bias$params$detection))
   survival_hist_ones <- ones(length(p_survival_hist_stage))
   distribution(survival_hist_ones) <- do.call(data$likelihood$distribution, list(size = 1, p = p_survival_hist_stage))
   # final_obs_ones <- ones(length(p_final_obs))
@@ -164,8 +168,9 @@ binned_age_recapture_loglik <- function(data, params) {
 }
 
 # internal function: define stage-recapture log-likelihood
-binned_stage_recapture_loglik <- function(data, params) {
+binary_cjs_loglik <- function(data, params) {
   
+  ## ADD CJS MODEL
   NULL
   
 }
@@ -174,13 +179,13 @@ binned_stage_recapture_loglik <- function(data, params) {
 stage_to_age_loglik <- function(data, params) {
 
   # unpack parameters
-  stage_to_age <- params$stage_to_age_conversion
+  stage_to_age <- params$stage_to_age_conversion[seq_len(nrow(data$data)), seq_len(ncol(data$data))]
   
   # estimate size-age distribution from data
   size_sums <- apply(data$data, 1, sum)
 
   # size-age model
-  distribution(data$data) <- do.call(data$likelihood, list(size = size_sums, p = stage_to_age))
+  distribution(data$data) <- do.call(data$likelihood$distribution, list(size = size_sums, p = stage_to_age))
 
 }
 
@@ -188,12 +193,12 @@ stage_to_age_loglik <- function(data, params) {
 age_to_stage_loglik <- function(data, params) {
   
   # unpack parameters
-  age_to_stage <- params$age_to_stage_conversion
+  age_to_stage <- params$age_to_stage_conversion[seq_len(nrow(data$data)), seq_len(ncol(data$data))]
   
   # estimate size-age distribution from data
   size_sums <- apply(data$data, 1, sum)
   
   # size-age model
-  distribution(data$data) <- do.call(data$likelihood, list(size = size_sums, p = age_to_stage))
+  distribution(data$data) <- do.call(data$likelihood$distribution, list(size = size_sums, p = age_to_stage))
   
 }

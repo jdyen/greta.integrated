@@ -1,5 +1,5 @@
 # internal function: create a set of parameters based on an integrated process object
-define_parameters <- function(process, classes_alt, n_fixed = NULL) {
+define_parameters <- function(process, classes_alt, n_fixed = NULL, n_random = NULL) {
   
   # do we need to deal with predictors?
   if (!is.null(n_fixed)) {
@@ -36,16 +36,17 @@ define_parameters <- function(process, classes_alt, n_fixed = NULL) {
   
   age_stage <- stage_age <- NULL
   if (!is.null(classes_alt)) {
-    if (process$type == "age")
+    if (process$type == "leslie")
       stage_age <- dirichlet(alpha = ones(classes_alt, process$classes))
-    if (process$type == "stage")
+    if (process$type != "leslie")
       age_stage <- dirichlet(alpha = ones(classes_alt, process$classes))
   }
   
   # return outputs
   list(inits = inits,
        survival = survival, transition = transition, fecundity = fecundity,
-       age_to_stage_conversion = age_stage, stage_to_age_conversion = stage_age)
+       age_to_stage_conversion = age_stage, stage_to_age_conversion = stage_age,
+       n_fixed = n_fixed, n_random = n_random)
   
 }
 
