@@ -410,18 +410,18 @@ plot_integrated_internal <- function(x) {
   gr$edges_df$fontsize <- 14
   
   edge_labels <- rep("", length(from))
-  ll_types <- ifelse(sapply(x_sub$likelihood, function(x) identical(x, poisson)), "Poisson", "Distribution")
-  ll_types <- ifelse(sapply(x_sub$likelihood, function(x) identical(x, negative_binomial)), "Negative binomial", ll_types)
-  ll_types <- ifelse(sapply(x_sub$likelihood, function(x) identical(x, binomial)), "Binomial", ll_types)
-  ll_types <- ifelse(sapply(x_sub$likelihood, function(x) identical(x, bernoulli)), "Bernoulli", ll_types)
-  ll_types <- ifelse(sapply(x_sub$likelihood, function(x) identical(x, multinomial)), "Multinomial", ll_types)
-  ll_types <- ifelse(sapply(x_sub$likelihood, function(x) identical(x, normal)), "Normal", ll_types)
-  ll_types <- ifelse(sapply(x_sub$likelihood, function(x) identical(x, lognormal)), "Lognormal", ll_types)
+  ll_types <- ifelse(sapply(x$likelihood, function(x) identical(x, poisson)), "Poisson", "Distribution")
+  ll_types <- ifelse(sapply(x$likelihood, function(x) identical(x, negative_binomial)), "Negative binomial", ll_types)
+  ll_types <- ifelse(sapply(x$likelihood, function(x) identical(x, binomial)), "Binomial", ll_types)
+  ll_types <- ifelse(sapply(x$likelihood, function(x) identical(x, bernoulli)), "Bernoulli", ll_types)
+  ll_types <- ifelse(sapply(x$likelihood, function(x) identical(x, multinomial)), "Multinomial", ll_types)
+  ll_types <- ifelse(sapply(x$likelihood, function(x) identical(x, normal)), "Normal", ll_types)
+  ll_types <- ifelse(sapply(x$likelihood, function(x) identical(x, lognormal)), "Lognormal", ll_types)
 
   if (any(conversion)) {
-    edge_labels[from == which(node_type == "converter")] <- c(ll_types[!conversion], ll_types[conversion])
+    edge_labels[from == which(node_type == "converter" & node_type != "predictor")] <- c(ll_types[!conversion], ll_types[conversion])
   } else {
-    edge_labels <- ll_types
+    edge_labels[from == which(node_type == "process")] <- ll_types
   }
   
   gr$edges_df$label <- edge_labels

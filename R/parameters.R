@@ -35,7 +35,7 @@ define_parameters <- function(process, classes_alt, n_fixed = NULL, n_random = N
   }
   
   age_stage <- stage_age <- NULL
-  if (!is.null(classes_alt)) {
+  if (!is.na(classes_alt)) {
     if (process$type == "leslie")
       stage_age <- dirichlet(alpha = ones(classes_alt, process$classes))
     if (process$type != "leslie")
