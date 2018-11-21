@@ -89,12 +89,14 @@ age_cjs_loglik <- function(data, params) {
 stage_cjs_loglik <- function(data, params) {
   
   # unpack params
+  classes <- nrow(params$inits)
   if (!is.null(data$predictors)) {
     survival <- apply(params$matrix, c(1, 3), "sum")
   } else {
     survival <- apply(params$matrix, 2, "sum")
+    survival <- rep(survival, ncol(data$data))
+    dim(survival) <- c(ncol(data$data), classes)
   }
-  classes <- nrow(params$inits)
   if (params$process_class == "leslie") {
     stage_to_age <- params$stage_to_age_conversion
   } else {

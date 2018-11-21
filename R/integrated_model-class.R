@@ -189,6 +189,7 @@ integrated_model <- function(...) {
     parameters[[i]]$data_details <- sapply(data_subset, function(x) dim(x$data))
     parameters[[i]]$process <- process_list[[i]]$type
     parameters[[i]]$likelihood <- sapply(data_subset, function(x) x$likelihood$distribution)
+    parameters[[i]]$density <- process_list[[i]]$density
   }
   
   # return a clean list of parameters
@@ -286,6 +287,9 @@ plot_integrated_internal <- function(x) {
   n_rand <- ifelse(is.null(n_rand), 0, n_rand)
   n_fix <- ifelse(is.null(n_fix), 0, n_fix)
   
+  # is there density dependence?
+  includes_density <- x$density$name != "none"
+  
   # separate conversions and non-conversions
   true_data <- !conversion
   n_data <- length(type)
@@ -335,6 +339,14 @@ plot_integrated_internal <- function(x) {
     
   }
   
+  if (includes_density) {
+    
+    full_mat <- cbind(full_mat, rep(0, nrow(full_mat)))
+    full_mat <- rbind(full_mat, c(1, rep(0, nrow(full_mat))))
+    node_type <- c(node_type, "density")
+
+  }
+  
   # build graph from adjacency matrix
   gr <- DiagrammeR::from_adj_matrix(full_mat,
                                     mode = "directed",
@@ -351,19 +363,23 @@ plot_integrated_internal <- function(x) {
   node_shapes <- rep("rectangle", n_nodes)
   node_shapes[node_type == "process"] <- "circle"
   node_shapes[node_type == "converter"] <- "diamond"
-
+  node_shapes[node_type == "density"] <- "diamond"
+  
   col_pal <- c("#57A0D3", "#4F7942", "#0E4D92", "#964000")
   col_pal_light <- paste0(col_pal, "50")
   node_edge_colours <- rep(col_pal[3], n_nodes)
   node_edge_colours[node_type == "process"] <- col_pal[2]
   node_edge_colours[node_type == "converter"] <- col_pal[4]
-
+  node_edge_colours[node_type == "density"] <- col_pal[4]
+  
   node_colours <- rep(col_pal_light[3], n_nodes)
   node_colours[node_type == "process"] <- col_pal_light[2]
   node_colours[node_type == "converter"] <- col_pal_light[4]
-
+  node_colours[node_type == "density"] <- col_pal_light[4]
+  
   node_size <- rep(0.9, n_nodes)
   node_size[node_type == "converter"] <- 1.0
+  node_size[node_type == "density"] <- 1.0
   
   node_labels <- rep("Node", ndata_plus1)
   node_labels[node_type == "process"] <- paste0(paste0(toupper(substr(process_type, 1, 1)), substr(process_type, 2, nchar(process_type))), "\nmatrix")
@@ -371,6 +387,7 @@ plot_integrated_internal <- function(x) {
   node_labels[node_type == "conversion"] <- paste(node_labels[node_type == "conversion"], paste0("(", names(type)[conversion], ")"), sep = "\n")
   node_labels[node_type == "converter"] <- paste(ifelse(process_type == "leslie", "Age", "Stage"), " conversion")
   node_labels[node_type == "predictor"] <- paste("Predictor variables", paste0("(", n_fix, " fixed, ", n_rand, " random", ")"), sep = "\n")
+  node_labels[node_type == "density"] <- paste0("Density\n(", x$density$name, ")")
   
   data_type <- rep("Data", n_data)
   data_type[grep("abundance", type)] <- "Abundance"
@@ -380,11 +397,12 @@ plot_integrated_internal <- function(x) {
   node_labels[node_type == "true_data"] <- data_type[!conversion]
   
   edge_style <- rep("solid", length(to))
-  edge_style[to == which(node_type == "converter")] <- "dashed"
+  edge_style[to == which(node_type == "process")] <- "dashed"
 
   font_colour <- rep(col_pal[3], n_nodes)
   font_colour[node_type == "process"] <- col_pal[2]
   font_colour[node_type == "converter"] <- col_pal[4]
+  font_colour[node_type == "density"] <- col_pal[4]
   
   # node options
   gr$nodes_df$type <- node_type
@@ -400,6 +418,8 @@ plot_integrated_internal <- function(x) {
   gr$nodes_df$width[node_type %in% c("true_data", "conversion", "predictor")] <- 1.5
   gr$nodes_df$width[node_type %in% c("converter")] <- 1.6
   gr$nodes_df$height[node_type %in% c("converter")] <- 1
+  gr$nodes_df$width[node_type %in% c("density")] <- 1.6
+  gr$nodes_df$height[node_type %in% c("density")] <- 1
   gr$nodes_df$height <- node_size * 0.8
   gr$nodes_df$label <- node_labels
   

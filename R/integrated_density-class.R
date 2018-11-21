@@ -47,7 +47,8 @@ ricker <- function(parameters = uniform(0, 1)) {
   
   # collate and return outputs  
   density <- list(form = form,
-                  parameters = parameters)
+                  parameters = parameters,
+                  name = "ricker")
   
   # return outputs
   as.integrated_density(density)
@@ -66,7 +67,8 @@ beverton <- function(parameters = uniform(0, 1)) {
   
   # collate and return outputs  
   density <- list(form = form,
-                  parameters = parameters)
+                  parameters = parameters,
+                  name = "beverton")
   
   # return outputs
   as.integrated_density(density)
@@ -89,7 +91,8 @@ element_wise <- function(parameters = uniform(0, 1), masks = list()) {
   
   # collate and return outputs  
   density <- list(form = form,
-                  parameters = parameters)
+                  parameters = parameters,
+                  name = "custom")
   
   # return outputs
   as.integrated_density(density)
@@ -108,7 +111,8 @@ no_density <- function(parameters = uniform(0, 1)) {
   
   # collate and return outputs  
   density <- list(form = form,
-                  parameters = parameters)
+                  parameters = parameters,
+                  name = "none")
   
   # return outputs
   as.integrated_density(density)
