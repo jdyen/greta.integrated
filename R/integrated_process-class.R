@@ -302,19 +302,19 @@ plot.integrated_process <- function(x, y, ...) {
   node_type[seq_len(n_nodes) > max_reprod] <- "post_reprod"
 
   # change node types and colours based on node type
-  node_shapes <- rep("square", n_nodes)
+  node_shapes <- rep("circle", n_nodes)
   node_shapes[node_type == "reprod"] <- "circle"
-  node_shapes[node_type == "post_reprod"] <- "diamond"
+  node_shapes[node_type == "post_reprod"] <- "circle"
 
-  col_pal <- c("gray50", "#57A0D3", "#1D2951", "#0E4D92")
-  col_pal_light <- ggplot2::alpha(col_pal, 0.5)
-  node_edge_colours <- rep(col_pal[1], n_nodes)
-  node_edge_colours[node_type == "reprod"] <- col_pal[4]
-  node_edge_colours[node_type == "post_reprod"] <- col_pal[3]
+  col_pal <- c("#57A0D3", "#4F7942", "#0E4D92", "#964000")
+  col_pal_light <- paste0(col_pal, "50")
+  node_edge_colours <- rep(col_pal[2], n_nodes)
+  node_edge_colours[node_type == "reprod"] <- col_pal[3]
+  node_edge_colours[node_type == "post_reprod"] <- col_pal[4]
 
   node_colours <- rep(col_pal_light[2], n_nodes)
-  node_colours[node_type == "reprod"] <- col_pal_light[4]
-  node_colours[node_type == "post_reprod"] <- col_pal_light[3]
+  node_colours[node_type == "reprod"] <- col_pal_light[3]
+  node_colours[node_type == "post_reprod"] <- col_pal_light[4]
 
   node_size <- rep(0.9, n_nodes)
   node_size[node_type == "reprod"] <- 0.9
@@ -328,10 +328,15 @@ plot.integrated_process <- function(x, y, ...) {
     node_labels[from[to == from]] <- paste0(node_labels[from[to == from]], "+")
   
   edge_style <- rep("solid", length(to))
+  edge_style[from %in% which(node_type == "reprod") & !(to %in% which(node_type == "reprod")) & !(to %in% which(node_type == "post_reprod"))] <- "dashed"
   
+  font_colour <- rep(col_pal[2], n_nodes)
+  font_colour[node_type == "reprod"] <- col_pal[3]
+  font_colour[node_type == "post_reprod"] <- col_pal[4]
+
   # node options
   gr$nodes_df$type <- node_type
-  gr$nodes_df$fontcolor <- col_pal[4]
+  gr$nodes_df$fontcolor <- font_colour
   gr$nodes_df$fontsize <- 12
   gr$nodes_df$penwidth <- 2
   
@@ -345,15 +350,15 @@ plot.integrated_process <- function(x, y, ...) {
   # edge options
   gr$edges_df$color <- "Gainsboro"
   gr$edges_df$fontname <- "Avenir"
-  gr$edges_df$fontcolor <- "gray70"
+  gr$edges_df$fontcolor <- "LightGray"
   gr$edges_df$fontsize <- 14
   gr$edges_df$penwidth <- 4
 
-  edge_types <- rep("transition", length(from))
-  edge_types <- ifelse(from == to, "survival", edge_types)
-  edge_types <- ifelse(from > to, "fecundity", edge_types)
+  edge_labels <- rep("transition", length(from))
+  edge_labels <- ifelse(from == to, "survival", edge_labels)
+  edge_labels <- ifelse(from > to, "fecundity", edge_labels)
 
-  gr$edges_df$label <- edge_types
+  gr$edges_df$label <- edge_labels
   gr$edges_df$style <- edge_style
 
   # set the layout type
