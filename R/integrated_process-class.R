@@ -318,7 +318,7 @@ plot.integrated_process <- function(x, y, ...) {
 
   node_size <- rep(0.9, n_nodes)
   node_size[node_type == "reprod"] <- 0.9
-  node_size[node_type == "post_reprod"] <- 1.0
+  node_size[node_type == "post_reprod"] <- 0.9
 
   # add some labels for the nodes (age or stage depending on type of model)
   node_labels <- paste(type, seq_len(n_nodes), sep = " ")
