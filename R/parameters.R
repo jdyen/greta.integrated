@@ -168,6 +168,11 @@ construct_matrix <- function(data, parameters) {
 
   } else { # must not have predictors
     
+    # initialise variances for randoms (ignored in this model) 
+    surv_sigma <- NULL
+    tran_sigma <- NULL
+    fec_sigma <- NULL
+    
     # construct population matrix
     mat1 <- mat2 <- zeros(data$classes[1], data$classes[1])
     
@@ -182,10 +187,14 @@ construct_matrix <- function(data, parameters) {
     mat2[masks$fecundity == 1] <- fec
     
   }
-
+  
+  # combine sigma terms
+  sigmas <- list(surv = surv_sigma, tran = tran_sigma, fec = fec_sigma)
+  
   # combine transition and fecundity    
   mat <- mat1 + mat2
   
-  mat
+  # return all
+  list(mat = mat, sigmas = sigmas)
    
 }

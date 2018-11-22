@@ -3,9 +3,15 @@
 \name{greta_interface}
 \alias{greta_interface}
 \alias{initialise}
+\alias{initialize}
+\alias{parameters}
 \title{work with greta objects created with \link[greta.integrated]{integrated_model}}
 \usage{
 initialise(object)
+
+initialize(object)
+
+parameters(object, ...)
 }
 \arguments{
 \item{object}{a \link[greta]{greta_model} object}

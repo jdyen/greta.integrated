@@ -11,7 +11,7 @@
 \usage{
 no_bias()
 
-detection(p_detect = beta(1, 1))
+detection(detection = beta(1, 1))
 
 is.integrated_bias(object)
 
@@ -20,13 +20,13 @@ is.integrated_bias(object)
 \method{summary}{integrated_bias}(object, ...)
 }
 \arguments{
-\item{p_detect}{parameter of detection model (see details for information on setting prior distributions)}
-
 \item{object}{an \code{integrated_bias} object}
 
 \item{x}{}
 
 \item{...}{additional arguments to \link[base]{print}, \link[base]{summary}, and \link[graphics]{plot} methods (currently ignored)}
+
+\item{p_detect}{parameter of detection model (see details for information on setting prior distributions)}
 
 \item{x}{an \code{integrated_bias} object}
 }

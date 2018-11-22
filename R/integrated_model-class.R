@@ -151,7 +151,13 @@ integrated_model <- function(...) {
     # prepare matrix if not a conversion likelihood
     if (!(data_modules[[i]]$likelihood$type) %in% c("stage_to_age", "age_to_stage")) {
       
-      parameters_tmp$matrix <- construct_matrix(data_modules[[i]], parameters[[process_id[i]]])
+      # construct the transition matrix
+      matrix_params <- construct_matrix(data_modules[[i]], parameters[[process_id[i]]])
+      parameters_tmp$matrix <- matrix_params$mat
+      
+      # pull out the sigmas
+      parameters[[process_id[i]]]$sigmas <- matrix_params$sigmas
+    
       
       # save the matrix with a unique name
       parameters[[process_id[i]]] <- c(parameters[[process_id[i]]], list(parameters_tmp$matrix))
@@ -189,6 +195,7 @@ integrated_model <- function(...) {
     parameters[[i]]$data_details <- sapply(data_subset, function(x) dim(x$data))
     parameters[[i]]$process <- process_list[[i]]$type
     parameters[[i]]$likelihood <- sapply(data_subset, function(x) x$likelihood$distribution)
+    parameters[[i]]$bias <- sapply(data_subset, function(x) x$bias)
     parameters[[i]]$density <- process_list[[i]]$density
   }
   

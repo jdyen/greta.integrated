@@ -39,7 +39,7 @@ is.integrated_process(object)
 
 \method{summary}{integrated_process}(object, ...)
 
-\method{plot}{integrated_process}(x, ...)
+\method{plot}{integrated_process}(x, y, ...)
 }
 \arguments{
 \item{classes}{something}
