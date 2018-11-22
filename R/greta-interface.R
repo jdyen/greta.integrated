@@ -55,8 +55,12 @@ initialise.greta_model <- function(object) {
   # apply initialise function separately to each node
   inits_list <- lapply(distrib_nodes, initialise_internal)
 
+  # turn params into a flat vector but store these in a named list
+  inits_list <- list(unlist(inits_list))
+  names(inits_list) <- names(object$target_greta_arrays)
+  
   # return output as a greta initials object
-  initials(unlist(inits_list))
+  do.call(initials, inits_list)
 
 }
 
